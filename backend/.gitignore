@@ -1,0 +1,30 @@
+# Backend .gitignore
+__pycache__/
+*.pyc
+.DS_Store
+.env
+*.sqlite3
+*.db
+*.log
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Virtual Environment ---
+venv/
+.env
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+output.txt
+
+# --- Node / JS ---
+node_modules/

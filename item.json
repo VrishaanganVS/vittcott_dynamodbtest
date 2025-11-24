@@ -1,0 +1,6 @@
+{
+  "username": {"S": "Vrishaangan"},
+  "email": {"S": "Vrishaangan@gmail.com"},
+  "portfolio_s3_key": {"S": "portfolios/teknobot24.xlsx"},
+  "created_at": {"S": "2025-10-11T10:30:00"}
+}

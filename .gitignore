@@ -1,0 +1,36 @@
+# Root .gitignore
+.env
+*.pyc
+__pycache__/
+.DS_Store
+.vscode/
+# Local backend virtualenv
+backend/.venv/
+
+# Backend environment files (do not commit secrets)
+backend/.env
+backend/src/.env
+
+# Runtime logs
+logs/
+*.log
+*.sqlite3
+*.db
+node_modules/
+.env.*
+# Node
+node_modules/
+.env
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.log
+# Python venv
+venv/
+# Mac
+.DS_Store
+# VSCode
+.vscode/
