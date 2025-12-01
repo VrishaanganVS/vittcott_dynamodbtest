@@ -10,7 +10,8 @@
     "create-table": "node create_table.js",
     "get-user": "node get_user_by_email.js",
     "sync-frontend": "node copy_frontend.js",
-    "dev": "node copy_frontend.js && node server.js"
+    "dev": "node copy_frontend.js && node server.js",
+    "dev:auto-create": "node copy_frontend.js && AUTO_CREATE_TABLE=true node server.js"
   },
   "keywords": [],
   "author": "",

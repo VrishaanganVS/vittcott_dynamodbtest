@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="../assets/css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js" defer></script>
+  <script src="../assets/js/config.js"></script>
 </head>
 <body class="bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-gray-100 min-h-screen flex items-center">
   <div class="max-w-3xl mx-auto w-full px-6">
@@ -108,10 +109,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      // Choose API base depending on how frontend is served:
-      // - If opened via file:// (no origin), call local backend on :3000
-      // - Otherwise use relative path so same-origin deploys work.
-      const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000' : '';
+      // Choose API base using shared config utility
+      const API_BASE = window.VittCottConfig ? window.VittCottConfig.getApiBase() : '';
       const res = await fetch(`${API_BASE}/register`, {
         method: "POST",
         headers: {

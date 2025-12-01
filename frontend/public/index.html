@@ -8,6 +8,7 @@
   <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js" defer></script>
   <link rel="stylesheet" href="/assets/css/styles.css">
+  <script src="/assets/js/config.js"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans">
   <!-- Header -->
@@ -146,17 +147,15 @@
   <button id="float-open" class="fixed right-6 bottom-6 z-50 px-4 py-3 bg-indigo-600 rounded-full shadow-lg">Assistant</button>
 
   <!-- Assistant modal / iframe (hidden until opened) -->
-  <!-- Change ASSISTANT_URL below to: '/assistant/' or 'https://assistant.example.com' or 'http://127.0.0.1:8501' as needed -->
+  <!-- Configure ASSISTANT_URL by setting window.VITTCOTT_ASSISTANT_URL before config.js loads,
+       or modify getAssistantUrl() in config.js. Options: '/assistant/', 'https://assistant.example.com', 'http://localhost:8501' -->
     <!-- Assistant now opens in a full browser tab at ASSISTANT_URL -->
 
   <!-- Shared scripts -->
   <script>
-    // CONFIG: change this to the correct URL for your setup:
-    // - local dev Streamlit: 'http://127.0.0.1:8501'
-    // - reverse-proxied path: '/assistant/'
-    // - production subdomain: 'https://assistant.example.com'
-    // For local development point to the Streamlit app
-    const ASSISTANT_URL = 'http://127.0.0.1:8501';
+    // Use shared config utility for assistant URL
+    // Can be overridden by setting window.VITTCOTT_ASSISTANT_URL before config.js loads
+    const ASSISTANT_URL = window.VittCottConfig ? window.VittCottConfig.getAssistantUrl() : 'http://localhost:8501';
 
     // Elements
     const openHeaderBtn = document.getElementById('open-ai-btn');
