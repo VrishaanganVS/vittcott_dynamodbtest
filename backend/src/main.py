@@ -141,6 +141,59 @@ async def finance_quote(symbol: str, range: str = "1d"):
         raise HTTPException(status_code=500, detail=f"Stock data error: {e}")
 
 
+@app.get("/api/finance/search")
+async def finance_search(query: str):
+    """Search for stocks by symbol or name."""
+    try:
+        # Search using yfinance Ticker
+        ticker = yf.Ticker(query)
+        info = ticker.info
+        
+        return {
+            "results": [{
+                "symbol": info.get("symbol", query),
+                "name": info.get("longName", info.get("shortName", query)),
+                "exchange": info.get("exchange", "NSE"),
+                "currency": info.get("currency", "INR"),
+                "type": info.get("quoteType", "EQUITY")
+            }]
+        }
+    except Exception as e:
+        logger.error(f"Search error for {query}: {e}")
+        return {"results": []}
+
+
+@app.get("/api/finance/indices")
+async def get_indices():
+    """Get major Indian market indices."""
+    indices = [
+        {"symbol": "^NSEI", "name": "Nifty 50"},
+        {"symbol": "^BSESN", "name": "Sensex"},
+        {"symbol": "^NSEBANK", "name": "Bank Nifty"},
+    ]
+    
+    results = []
+    for idx in indices:
+        try:
+            ticker = yf.Ticker(idx["symbol"])
+            hist = ticker.history(period="2d")
+            if len(hist) >= 2:
+                current = hist.iloc[-1]["Close"]
+                previous = hist.iloc[-2]["Close"]
+                change = ((current - previous) / previous * 100)
+                results.append({
+                    "symbol": idx["symbol"],
+                    "name": idx["name"],
+                    "displayName": idx["name"].upper(),
+                    "price": float(current),
+                    "change": float(change)
+                })
+        except Exception as e:
+            logger.error(f"Error fetching {idx['symbol']}: {e}")
+    
+    return {"indices": results}
+
+
 # ---------- Presign / Upload helpers (copied from presign_app.py) ----------
 # ---------- Presign / Upload helpers ----------
 import boto3

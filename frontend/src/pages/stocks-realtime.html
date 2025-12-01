@@ -307,36 +307,13 @@
 
       document.getElementById('refresh-icon').classList.add('animate-spin');
       
-      console.log('🔄 Fetching market data...');
-      
       // Fetch indices
-      try {
-        const indicesData = await fetchAllStocks(MARKET_INDICES);
-        console.log('📊 Indices data:', indicesData);
-        if (indicesData && indicesData.length > 0) {
-          document.getElementById('indices-list').innerHTML = indicesData.map(renderIndex).join('');
-        } else {
-          document.getElementById('indices-list').innerHTML = '<div class="col-span-3 text-center text-gray-400 py-4">⏳ Loading market indices...</div>';
-        }
-      } catch (error) {
-        console.error('Error loading indices:', error);
-        document.getElementById('indices-list').innerHTML = '<div class="col-span-3 text-center text-red-400 py-4">❌ Failed to load indices</div>';
-      }
+      const indicesData = await fetchAllStocks(MARKET_INDICES);
+      document.getElementById('indices-list').innerHTML = indicesData.map(renderIndex).join('');
 
       // Fetch stocks
-      try {
-        console.log('📈 Fetching stocks:', symbols.length);
-        currentStocks = await fetchAllStocks(symbols);
-        console.log('✅ Stocks loaded:', currentStocks.length);
-        if (currentStocks && currentStocks.length > 0) {
-          document.getElementById('stocks-list').innerHTML = currentStocks.map(renderStockCard).join('');
-        } else {
-          document.getElementById('stocks-list').innerHTML = '<div class="col-span-3 text-center text-gray-400 py-8">⏳ Loading stock data...</div>';
-        }
-      } catch (error) {
-        console.error('Error loading stocks:', error);
-        document.getElementById('stocks-list').innerHTML = '<div class="col-span-3 text-center text-red-400 py-8">❌ Failed to load stocks</div>';
-      }
+      currentStocks = await fetchAllStocks(symbols);
+      document.getElementById('stocks-list').innerHTML = currentStocks.map(renderStockCard).join('');
       
       document.getElementById('refresh-icon').classList.remove('animate-spin');
 

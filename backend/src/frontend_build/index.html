@@ -27,6 +27,8 @@
       <div class="flex items-center gap-3" id="auth-section">
         <!-- header assistant button (opens modal) -->
         <button id="open-ai-btn" class="px-3 py-2 bg-indigo-600 rounded">Assistant</button>
+        <!-- Upload Portfolio button -->
+        <button id="open-upload-btn" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded">Upload Portfolio</button>
         <!-- Logged out state (default) -->
         <div id="logged-out-btns">
           <a href="http://localhost:3000/pages/create-account.html" class="px-3 py-2 bg-indigo-500 rounded">Login / Signup</a>
@@ -154,6 +156,22 @@
   <!-- Floating assistant button -->
   <button id="float-open" class="fixed right-6 bottom-6 z-50 px-4 py-3 bg-indigo-600 rounded-full shadow-lg">Assistant</button>
 
+  <!-- Upload Portfolio Widget (hidden by default) -->
+  <div id="upload-widget" style="display:none; position:fixed; right:20px; bottom:90px; z-index:60; background:rgba(17,24,39,0.95); padding:18px; border-radius:10px; width:320px; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <strong style="color:#E6EEF8">Upload Portfolio</strong>
+      <button id="close-upload" style="background:transparent; color:#cbd5e1; border:none; font-size:16px; cursor:pointer;">✕</button>
+    </div>
+    <input id="uc-username" placeholder="username" style="width:100%; padding:8px; margin-bottom:8px; border-radius:6px; border:1px solid #374151; background:#0f1724; color:#e5e7eb" value="" />
+    <input id="uc-file" type="file" accept=".xlsx,.xls" style="width:100%; margin-bottom:8px; color:#e5e7eb" />
+    <div style="display:flex; gap:8px;">
+      <button id="uc-uploadBtn" style="flex:1; padding:8px; background:#10B981; color:white; border-radius:6px; border:none; cursor:pointer; font-weight:600;">Upload</button>
+      <button id="uc-clearBtn" style="padding:8px; background:#374151; color:#e5e7eb; border-radius:6px; border:none; cursor:pointer;">Clear</button>
+    </div>
+    <progress id="uc-progress" value="0" max="100" style="width:100%; margin-top:8px; display:none"></progress>
+    <div id="uc-status" style="color:#cbd5e1; margin-top:8px; font-size:13px;"></div>
+  </div>
+
   <!-- Assistant modal / iframe (hidden until opened) -->
   <!-- Configure ASSISTANT_URL by setting window.VITTCOTT_ASSISTANT_URL before config.js loads,
        or modify getAssistantUrl() in config.js. Options: '/assistant/', 'https://assistant.example.com', 'http://localhost:8501' -->
@@ -244,15 +262,159 @@
       alert('Logged out successfully!');
       showLoggedOut();
     }
+
+    // ===== Upload Portfolio Widget Logic =====
+    const PRESIGN_URL = 'http://localhost:8000/presign';
+    const REGISTER_URL = 'http://localhost:8000/register';
+
+    const openUploadBtn = document.getElementById('open-upload-btn');
+    const closeUploadBtn = document.getElementById('close-upload');
+    const uploadWidget = document.getElementById('upload-widget');
+    const ucUsername = document.getElementById('uc-username');
+    const ucFile = document.getElementById('uc-file');
+    const ucUploadBtn = document.getElementById('uc-uploadBtn');
+    const ucClearBtn = document.getElementById('uc-clearBtn');
+    const ucProgress = document.getElementById('uc-progress');
+    const ucStatus = document.getElementById('uc-status');
+
+    // Open upload widget
+    if (openUploadBtn) {
+      openUploadBtn.addEventListener('click', () => {
+        uploadWidget.style.display = 'block';
+        // Pre-fill username if logged in
+        const token = localStorage.getItem('vittcott_token');
+        const userStr = localStorage.getItem('vittcott_user');
+        if (token && userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            ucUsername.value = user.email.split('@')[0];
+          } catch (e) {
+            ucUsername.value = '';
+          }
+        }
+      });
+    }
+
+    // Close upload widget
+    if (closeUploadBtn) {
+      closeUploadBtn.addEventListener('click', () => {
+        uploadWidget.style.display = 'none';
+      });
+    }
+
+    // Clear form
+    if (ucClearBtn) {
+      ucClearBtn.addEventListener('click', () => {
+        ucFile.value = '';
+        ucProgress.style.display = 'none';
+        ucProgress.value = 0;
+        ucStatus.textContent = '';
+      });
+    }
+
+    // Upload file to S3
+    if (ucUploadBtn) {
+      ucUploadBtn.addEventListener('click', async () => {
+        const username = ucUsername.value.trim();
+        const file = ucFile.files[0];
+
+        if (!username) {
+          ucStatus.textContent = '❌ Please enter username';
+          ucStatus.style.color = '#ef4444';
+          return;
+        }
+        if (!file) {
+          ucStatus.textContent = '❌ Please select a file';
+          ucStatus.style.color = '#ef4444';
+          return;
+        }
+
+        try {
+          ucStatus.textContent = '🔄 Getting presigned URL...';
+          ucStatus.style.color = '#cbd5e1';
+          ucProgress.style.display = 'block';
+          ucProgress.value = 10;
+
+          // Step 1: Get presigned POST from backend
+          const presignRes = await fetch(PRESIGN_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: file.name,
+              content_type: file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              username: username
+            })
+          });
+
+          if (!presignRes.ok) {
+            throw new Error(`Presign failed: ${presignRes.status}`);
+          }
+
+          const presignData = await presignRes.json();
+          ucProgress.value = 30;
+          ucStatus.textContent = '☁️ Uploading to S3...';
+
+          // Step 2: Upload file to S3 using presigned POST
+          const formData = new FormData();
+          Object.entries(presignData.fields).forEach(([key, value]) => {
+            formData.append(key, value);
+          });
+          formData.append('file', file);
+
+          const s3Res = await fetch(presignData.url, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (s3Res.status !== 204 && !s3Res.ok) {
+            throw new Error(`S3 upload failed: ${s3Res.status}`);
+          }
+
+          ucProgress.value = 70;
+          ucStatus.textContent = '📝 Registering file...';
+
+          // Step 3: Register file in backend
+          const registerRes = await fetch(REGISTER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: username,
+              s3_key: presignData.key,
+              filename: file.name,
+              size: file.size
+            })
+          });
+
+          if (!registerRes.ok) {
+            console.warn('Registration failed but file uploaded to S3');
+          }
+
+          ucProgress.value = 100;
+          ucStatus.textContent = '✅ Upload successful!';
+          ucStatus.style.color = '#10b981';
+
+          // Clear after 3 seconds
+          setTimeout(() => {
+            ucFile.value = '';
+            ucProgress.style.display = 'none';
+            ucProgress.value = 0;
+            ucStatus.textContent = '';
+          }, 3000);
+
+        } catch (err) {
+          console.error('Upload error:', err);
+          ucStatus.textContent = `❌ Upload failed: ${err.message}`;
+          ucStatus.style.color = '#ef4444';
+          ucProgress.style.display = 'none';
+        }
+      });
+    }
   </script>
 
   <script src="/assets/js/app.js"></script>
   <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 </body>
 </html>
-
-
-<!-- Add this next to your other header buttons (Upload Portfolio) -->
 <button id="open-upload-btn" class="px-3 py-2 bg-green-600 rounded">Upload Portfolio</button>
 
 <!-- Upload widget (hidden by default) -->

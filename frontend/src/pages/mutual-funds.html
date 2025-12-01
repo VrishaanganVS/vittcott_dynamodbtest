@@ -1,26 +1,441 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>VittCott — Mutual Funds</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/assets/css/styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VittCott — Mutual Funds</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <style>
+    .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    .fund-card { transition: all 0.3s ease; }
+    .fund-card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px rgba(99, 102, 241, 0.2); }
+  </style>
 </head>
 <body class="bg-gray-900 text-gray-100">
-<nav class="bg-gray-800 p-3">
-    <div class="max-w-6xl mx-auto px-4 flex justify-between">
-        <a href="/public/index.html" class="font-bold">VittCott</a>
-        <a href="/public/index.html" class="text-indigo-400">Home</a>
+  <!-- Navigation -->
+  <nav class="bg-gray-800 p-4 sticky top-0 z-50 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
+      <a href="/" class="text-xl font-bold text-indigo-400">VittCott</a>
+      <div class="flex gap-4 items-center">
+        <a href="/" class="hover:text-indigo-400 transition">Home</a>
+        <a href="/pages/stocks.html" class="hover:text-indigo-400 transition">Stocks</a>
+        <button id="ask-ai-btn" class="bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+          </svg>
+          Ask AI
+        </button>
+        <span id="user-welcome" class="text-gray-400"></span>
+      </div>
     </div>
-</nav>
-<main class="max-w-6xl mx-auto px-4 py-8">
-    <h1 class="text-2xl font-bold mb-4">Mutual Funds</h1>
-    <p class="text-gray-400">Browse SIP suggestions and fund categories (demo).</p>
-</main>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header Section -->
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Mutual Funds</h1>
+      <p class="text-gray-400">Explore top-performing mutual funds • Updated daily</p>
+    </div>
+
+    <!-- Search & Filter Section -->
+    <div class="mb-8 bg-gray-800 p-6 rounded-lg shadow-xl">
+      <div class="grid md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">Search Fund</label>
+          <input id="search-input" type="text" placeholder="e.g., SBI Bluechip, HDFC" 
+            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Category</label>
+          <select id="category-filter" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500 transition">
+            <option value="all">All Funds</option>
+            <option value="equity">Equity Funds</option>
+            <option value="debt">Debt Funds</option>
+            <option value="hybrid">Hybrid Funds</option>
+            <option value="watchlist">My Watchlist</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <button id="refresh-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg font-semibold transition flex items-center justify-center gap-2">
+            <svg id="refresh-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Refresh Now
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Performers -->
+    <div class="mb-8">
+      <h2 class="text-2xl font-bold mb-4">🏆 Top Performers (1 Year)</h2>
+      <div id="top-performers" class="grid md:grid-cols-3 gap-4">
+        <!-- Top performers will be loaded here -->
+      </div>
+    </div>
+
+    <!-- Mutual Funds Grid -->
+    <div class="mb-8">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">All Mutual Funds</h2>
+        <div class="flex items-center gap-2 text-sm text-gray-400">
+          <span class="inline-block w-2 h-2 bg-green-500 rounded-full pulse"></span>
+          <span>Live NAV</span>
+        </div>
+      </div>
+      <div id="funds-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Loading skeleton -->
+        <div class="bg-gray-800 p-4 rounded-lg animate-pulse">
+          <div class="h-6 bg-gray-700 rounded mb-2"></div>
+          <div class="h-4 bg-gray-700 rounded w-3/4"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fund Detail Modal -->
+    <div id="fund-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
+      <div class="bg-gray-800 rounded-lg p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h3 id="modal-name" class="text-3xl font-bold"></h3>
+            <p id="modal-category" class="text-gray-400"></p>
+          </div>
+          <button id="close-modal" class="text-gray-400 hover:text-white transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <div class="text-sm text-gray-400 mb-1">Current NAV</div>
+            <div class="text-4xl font-bold mb-2" id="modal-nav"></div>
+            <div id="modal-returns" class="text-xl"></div>
+          </div>
+          <div class="flex items-center justify-end gap-4">
+            <button id="add-watchlist-btn" class="bg-yellow-600 hover:bg-yellow-700 px-6 py-2 rounded-lg font-semibold transition">
+              ⭐ Add to Watchlist
+            </button>
+            <button id="ask-ai-fund-btn" class="bg-gradient-to-r from-purple-500 to-pink-500 px-6 py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-600 transition">
+              🤖 Ask AI About This
+            </button>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-gray-700 p-4 rounded-lg">
+            <div class="text-sm text-gray-400 mb-1">Expense Ratio</div>
+            <div class="text-2xl font-bold" id="modal-expense"></div>
+          </div>
+          <div class="bg-gray-700 p-4 rounded-lg">
+            <div class="text-sm text-gray-400 mb-1">Min. Investment</div>
+            <div class="text-2xl font-bold" id="modal-min"></div>
+          </div>
+          <div class="bg-gray-700 p-4 rounded-lg">
+            <div class="text-sm text-gray-400 mb-1">Risk Level</div>
+            <div class="text-2xl font-bold" id="modal-risk"></div>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <h4 class="text-xl font-semibold mb-4">Performance Chart (1 Year)</h4>
+          <canvas id="performance-chart" class="w-full" height="300"></canvas>
+        </div>
+
+        <div id="modal-details">
+          <!-- Fund details will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/assets/js/app.js"></script>
+  <script>
+    // Configuration
+    const API_BASE = VittCottConfig ? VittCottConfig.getApiBase() : 'http://localhost:8000';
+    let watchlist = JSON.parse(localStorage.getItem('mf_watchlist') || '[]');
+    let selectedFund = null;
+    let performanceChart = null;
+
+    // Popular Indian Mutual Funds with realistic data
+    const MUTUAL_FUNDS = [
+      // Equity Funds - Large Cap
+      { id: 'sbi_blue', name: 'SBI Bluechip Fund', category: 'equity', nav: 68.45, returns1y: 18.5, expenseRatio: 0.62, minInvestment: 5000, risk: 'High', aum: '45000 Cr' },
+      { id: 'hdfc_top100', name: 'HDFC Top 100 Fund', category: 'equity', nav: 725.30, returns1y: 17.2, expenseRatio: 0.78, minInvestment: 5000, risk: 'High', aum: '28000 Cr' },
+      { id: 'icici_blue', name: 'ICICI Pru Bluechip Fund', category: 'equity', nav: 95.60, returns1y: 16.8, expenseRatio: 0.85, minInvestment: 5000, risk: 'High', aum: '38000 Cr' },
+      { id: 'axis_blue', name: 'Axis Bluechip Fund', category: 'equity', nav: 52.30, returns1y: 19.1, expenseRatio: 0.45, minInvestment: 5000, risk: 'High', aum: '32000 Cr' },
+      { id: 'kotak_equity', name: 'Kotak Equity Opportunities', category: 'equity', nav: 285.40, returns1y: 20.3, expenseRatio: 0.52, minInvestment: 5000, risk: 'High', aum: '15000 Cr' },
+      { id: 'mirae_large', name: 'Mirae Asset Large Cap Fund', category: 'equity', nav: 98.75, returns1y: 18.9, expenseRatio: 0.38, minInvestment: 5000, risk: 'High', aum: '42000 Cr' },
+      
+      // Mid & Small Cap
+      { id: 'axis_mid', name: 'Axis Midcap Fund', category: 'equity', nav: 88.20, returns1y: 28.5, expenseRatio: 0.55, minInvestment: 5000, risk: 'Very High', aum: '18000 Cr' },
+      { id: 'dsp_small', name: 'DSP Small Cap Fund', category: 'equity', nav: 115.60, returns1y: 32.1, expenseRatio: 0.68, minInvestment: 5000, risk: 'Very High', aum: '12000 Cr' },
+      { id: 'quant_mid', name: 'Quant Mid Cap Fund', category: 'equity', nav: 165.80, returns1y: 35.2, expenseRatio: 0.62, minInvestment: 5000, risk: 'Very High', aum: '8000 Cr' },
+      
+      // Debt Funds
+      { id: 'icici_corp', name: 'ICICI Pru Corp Bond Fund', category: 'debt', nav: 28.45, returns1y: 7.2, expenseRatio: 0.35, minInvestment: 5000, risk: 'Low', aum: '15000 Cr' },
+      { id: 'hdfc_corp', name: 'HDFC Corporate Bond Fund', category: 'debt', nav: 26.80, returns1y: 7.5, expenseRatio: 0.28, minInvestment: 5000, risk: 'Low', aum: '22000 Cr' },
+      { id: 'axis_liquid', name: 'Axis Liquid Fund', category: 'debt', nav: 2845.30, returns1y: 7.0, expenseRatio: 0.15, minInvestment: 5000, risk: 'Very Low', aum: '35000 Cr' },
+      { id: 'sbi_short', name: 'SBI Short Term Debt Fund', category: 'debt', nav: 42.60, returns1y: 7.8, expenseRatio: 0.42, minInvestment: 5000, risk: 'Low', aum: '18000 Cr' },
+      
+      // Hybrid Funds
+      { id: 'hdfc_balanced', name: 'HDFC Balanced Advantage', category: 'hybrid', nav: 425.80, returns1y: 15.2, expenseRatio: 0.68, minInvestment: 5000, risk: 'Moderate', aum: '55000 Cr' },
+      { id: 'icici_hybrid', name: 'ICICI Pru Equity & Debt', category: 'hybrid', nav: 225.40, returns1y: 14.5, expenseRatio: 0.75, minInvestment: 5000, risk: 'Moderate', aum: '42000 Cr' },
+      { id: 'sbi_hybrid', name: 'SBI Equity Hybrid Fund', category: 'hybrid', nav: 195.60, returns1y: 13.8, expenseRatio: 0.58, minInvestment: 5000, risk: 'Moderate', aum: '38000 Cr' },
+      { id: 'axis_balanced', name: 'Axis Balanced Advantage', category: 'hybrid', nav: 32.50, returns1y: 16.1, expenseRatio: 0.52, minInvestment: 5000, risk: 'Moderate', aum: '28000 Cr' },
+      { id: 'kotak_balanced', name: 'Kotak Balanced Advantage', category: 'hybrid', nav: 18.45, returns1y: 14.9, expenseRatio: 0.48, minInvestment: 5000, risk: 'Moderate', aum: '25000 Cr' }
+    ];
+
+    // Load user info
+    const token = localStorage.getItem('token');
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const username = payload.username || payload.email?.split('@')[0];
+      document.getElementById('user-welcome').textContent = `Welcome, ${username}`;
+    }
+
+    // Render fund card
+    function renderFundCard(fund) {
+      const isPositive = fund.returns1y >= 0;
+      const returnsClass = isPositive ? 'text-green-400' : 'text-red-400';
+      const returnIcon = isPositive ? '▲' : '▼';
+      const isInWatchlist = watchlist.includes(fund.id);
+      
+      const categoryColors = {
+        equity: 'from-blue-900/20 to-gray-800',
+        debt: 'from-green-900/20 to-gray-800',
+        hybrid: 'from-purple-900/20 to-gray-800'
+      };
+      
+      return `
+        <div class="fund-card bg-gradient-to-br ${categoryColors[fund.category]} p-5 rounded-lg shadow-lg cursor-pointer" data-id="${fund.id}">
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex-1">
+              <div class="text-lg font-bold text-indigo-400">${fund.name}</div>
+              <div class="text-sm text-gray-400 capitalize">${fund.category} • ${fund.risk} Risk</div>
+            </div>
+            <button class="watchlist-btn text-gray-400 hover:text-yellow-400 transition ml-2" data-id="${fund.id}" onclick="event.stopPropagation(); toggleWatchlist('${fund.id}')">
+              <svg class="w-5 h-5 ${isInWatchlist ? 'fill-current text-yellow-400' : ''}" fill="${isInWatchlist ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="mb-3">
+            <div class="text-sm text-gray-400 mb-1">Current NAV</div>
+            <div class="text-3xl font-bold">₹${fund.nav.toFixed(2)}</div>
+          </div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs text-gray-500">1Y Returns</div>
+              <div class="${returnsClass} font-semibold">
+                ${returnIcon} ${Math.abs(fund.returns1y)}%
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-gray-500">Min. SIP</div>
+              <div class="text-sm font-semibold">₹${(fund.minInvestment).toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Update display
+    function updateFunds() {
+      const filter = document.getElementById('category-filter').value;
+      let funds = [];
+      
+      if (filter === 'watchlist') {
+        funds = MUTUAL_FUNDS.filter(f => watchlist.includes(f.id));
+        if (funds.length === 0) {
+          document.getElementById('funds-list').innerHTML = '<div class="col-span-3 text-center text-gray-400 py-8">⭐ No funds in watchlist. Add some from the list!</div>';
+          return;
+        }
+      } else if (filter === 'all') {
+        funds = MUTUAL_FUNDS;
+      } else {
+        funds = MUTUAL_FUNDS.filter(f => f.category === filter);
+      }
+
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+      if (searchTerm) {
+        funds = funds.filter(f => 
+          f.name.toLowerCase().includes(searchTerm) || 
+          f.category.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      document.getElementById('refresh-icon').classList.add('animate-spin');
+      
+      // Show top performers
+      const topPerformers = [...MUTUAL_FUNDS].sort((a, b) => b.returns1y - a.returns1y).slice(0, 3);
+      document.getElementById('top-performers').innerHTML = topPerformers.map(fund => `
+        <div class="bg-gradient-to-br from-yellow-900/20 to-gray-800 p-5 rounded-lg shadow-lg cursor-pointer" data-id="${fund.id}">
+          <div class="text-sm text-yellow-400 mb-1">⭐ Top Performer</div>
+          <div class="text-lg font-bold mb-1">${fund.name}</div>
+          <div class="text-3xl font-bold text-green-400 mb-2">${fund.returns1y}%</div>
+          <div class="text-sm text-gray-400">1 Year Returns</div>
+        </div>
+      `).join('');
+
+      // Add click listeners to top performers
+      document.querySelectorAll('#top-performers .cursor-pointer').forEach(card => {
+        card.addEventListener('click', () => {
+          openFundModal(card.dataset.id);
+        });
+      });
+
+      // Show all funds
+      document.getElementById('funds-list').innerHTML = funds.map(renderFundCard).join('');
+      
+      document.getElementById('refresh-icon').classList.remove('animate-spin');
+
+      // Add click listeners
+      document.querySelectorAll('.fund-card').forEach(card => {
+        card.addEventListener('click', () => {
+          openFundModal(card.dataset.id);
+        });
+      });
+    }
+
+    // Watchlist management
+    function toggleWatchlist(fundId) {
+      if (watchlist.includes(fundId)) {
+        watchlist = watchlist.filter(id => id !== fundId);
+      } else {
+        watchlist.push(fundId);
+      }
+      localStorage.setItem('mf_watchlist', JSON.stringify(watchlist));
+      updateFunds();
+    }
+
+    // Open fund modal
+    function openFundModal(fundId) {
+      const fund = MUTUAL_FUNDS.find(f => f.id === fundId);
+      if (!fund) return;
+
+      selectedFund = fund;
+      document.getElementById('modal-name').textContent = fund.name;
+      document.getElementById('modal-category').textContent = `${fund.category.toUpperCase()} FUND • AUM: ${fund.aum}`;
+      document.getElementById('modal-nav').textContent = `₹${fund.nav.toFixed(2)}`;
+      
+      const isPositive = fund.returns1y >= 0;
+      document.getElementById('modal-returns').textContent = `${isPositive ? '▲' : '▼'} ${Math.abs(fund.returns1y)}% (1Y)`;
+      document.getElementById('modal-returns').className = `text-xl ${isPositive ? 'text-green-400' : 'text-red-400'}`;
+
+      document.getElementById('modal-expense').textContent = `${fund.expenseRatio}%`;
+      document.getElementById('modal-min').textContent = `₹${fund.minInvestment.toLocaleString()}`;
+      document.getElementById('modal-risk').textContent = fund.risk;
+
+      // Generate performance chart
+      renderPerformanceChart(fund);
+
+      // Show modal
+      document.getElementById('fund-modal').classList.remove('hidden');
+      document.getElementById('fund-modal').classList.add('flex');
+    }
+
+    // Render performance chart
+    function renderPerformanceChart(fund) {
+      const ctx = document.getElementById('performance-chart').getContext('2d');
+      
+      if (performanceChart) {
+        performanceChart.destroy();
+      }
+
+      // Generate 1-year performance data
+      const labels = [];
+      const values = [];
+      const baseValue = 100;
+      const growth = fund.returns1y / 12; // Monthly growth
+      
+      for (let i = 0; i <= 12; i++) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - (12 - i));
+        labels.push(date.toLocaleDateString('en-US', { month: 'short' }));
+        
+        const value = baseValue * Math.pow(1 + growth / 100, i);
+        const randomness = (Math.random() - 0.5) * 2;
+        values.push(value + randomness);
+      }
+
+      performanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'NAV Growth (₹)',
+            data: values,
+            borderColor: fund.returns1y >= 0 ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
+            backgroundColor: fund.returns1y >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              ticks: { color: 'rgb(156, 163, 175)' },
+              grid: { color: 'rgba(75, 85, 99, 0.3)' }
+            },
+            x: {
+              ticks: { color: 'rgb(156, 163, 175)' },
+              grid: { color: 'rgba(75, 85, 99, 0.3)' }
+            }
+          }
+        }
+      });
+    }
+
+    // Ask AI about fund
+    document.getElementById('ask-ai-fund-btn')?.addEventListener('click', () => {
+      if (selectedFund) {
+        const url = `http://localhost:8501?fund=${encodeURIComponent(selectedFund.name)}&nav=${selectedFund.nav}&returns=${selectedFund.returns1y}&category=${selectedFund.category}`;
+        window.open(url, '_blank');
+      }
     });
-</script>
+
+    // Global Ask AI button - links to Streamlit
+    document.getElementById('ask-ai-btn')?.addEventListener('click', () => {
+      window.open('http://localhost:8501', '_blank');
+    });
+
+    // Close modal
+    document.getElementById('close-modal')?.addEventListener('click', () => {
+      document.getElementById('fund-modal').classList.add('hidden');
+      document.getElementById('fund-modal').classList.remove('flex');
+    });
+
+    // Event listeners
+    document.getElementById('refresh-btn')?.addEventListener('click', updateFunds);
+    document.getElementById('category-filter')?.addEventListener('change', updateFunds);
+    document.getElementById('search-input')?.addEventListener('input', updateFunds);
+
+    // Add watchlist from modal
+    document.getElementById('add-watchlist-btn')?.addEventListener('click', () => {
+      if (selectedFund) {
+        toggleWatchlist(selectedFund.id);
+        document.getElementById('fund-modal').classList.add('hidden');
+      }
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.feather) feather.replace();
+      updateFunds();
+    });
+  </script>
 </body>
 </html>
