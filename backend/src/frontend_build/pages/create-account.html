@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="../assets/css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js" defer></script>
+  <script src="../assets/js/config.js"></script>
 </head>
 <body class="bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-gray-100 min-h-screen flex items-center">
   <div class="max-w-3xl mx-auto w-full px-6">
@@ -122,8 +123,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         console.log("Submitting to backend:", { email, displayName: fullName });
-        // If the page is opened via file:// use the local backend, otherwise use a relative path
-        const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000' : '';
+        // Use shared config utility for API base URL
+        const API_BASE = window.VittCottConfig ? window.VittCottConfig.getApiBase() : '';
         const res = await fetch(`${API_BASE}/register`, {
           method: "POST",
           headers: {
