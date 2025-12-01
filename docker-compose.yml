@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # Node.js Authentication Backend
+  node-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vittcott-node-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - USERS_TABLE=${USERS_TABLE:-Vittcott_Users}
+      - JWT_SECRET=${JWT_SECRET}
+      - FRONTEND_ORIGINS=http://localhost:3000,http://localhost:8000,http://localhost:8501
+    networks:
+      - vittcott-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Python FastAPI Backend
+  python-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    container_name: vittcott-python-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - PORT=8000
+      - RELOAD=false
+    networks:
+      - vittcott-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - node-backend
+
+  # Streamlit AI Assistant
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: vittcott-streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      - VITTCOTT_BACKEND_URL=http://python-backend:8000
+    networks:
+      - vittcott-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - python-backend
+
+networks:
+  vittcott-network:
+    driver: bridge
+
+volumes:
+  node_modules:
