@@ -72,9 +72,9 @@ check_docker() {
 start_dynamodb() {
     log_info "Starting local DynamoDB on port $DYNAMODB_PORT..."
     
-    # Check if container already exists
-    if docker ps -a --format '{{.Names}}' | grep -q "^${DYNAMODB_CONTAINER_NAME}$"; then
-        if docker ps --format '{{.Names}}' | grep -q "^${DYNAMODB_CONTAINER_NAME}$"; then
+    # Check if container already exists using docker inspect (more efficient)
+    if docker inspect "$DYNAMODB_CONTAINER_NAME" &>/dev/null; then
+        if docker inspect --format='{{.State.Running}}' "$DYNAMODB_CONTAINER_NAME" 2>/dev/null | grep -q "true"; then
             log_info "DynamoDB container already running"
             return 0
         else
@@ -91,10 +91,14 @@ start_dynamodb() {
     
     DYNAMODB_STARTED="true"
     
-    # Wait for DynamoDB to be ready
+    # Wait for DynamoDB to be ready - verify with ListTables request
     log_info "Waiting for DynamoDB to be ready..."
     for i in {1..30}; do
-        if curl -s "http://localhost:$DYNAMODB_PORT" > /dev/null 2>&1; then
+        # Use DynamoDB ListTables operation to verify service is actually running
+        if curl -s -X POST "http://localhost:$DYNAMODB_PORT/" \
+            -H "X-Amz-Target: DynamoDB_20120810.ListTables" \
+            -H "Content-Type: application/x-amz-json-1.0" \
+            -d '{"Limit":1}' 2>/dev/null | grep -q "TableNames"; then
             log_info "DynamoDB is ready"
             return 0
         fi
@@ -136,10 +140,15 @@ start_server() {
     node server.js &
     SERVER_PID=$!
     
-    # Wait for server to be ready
+    # Wait for server to be ready - verify with health endpoint and expected response
     log_info "Waiting for server to be ready..."
     for i in {1..30}; do
-        if curl -s "http://localhost:$SERVER_PORT/" > /dev/null 2>&1; then
+        response=$(curl -s -w "\n%{http_code}" "http://localhost:$SERVER_PORT/" 2>/dev/null)
+        http_code=$(echo "$response" | tail -1)
+        body=$(echo "$response" | head -n -1)
+        
+        # Check for HTTP 200 and expected response content
+        if [ "$http_code" = "200" ] && echo "$body" | grep -q "ok"; then
             log_info "Server is ready (PID: $SERVER_PID)"
             return 0
         fi
@@ -216,8 +225,13 @@ run_smoke_tests() {
     if [ "$http_code" = "200" ]; then
         log_info "  ✓ Login passed (HTTP $http_code)"
         ((passed++))
-        # Extract token for next test
-        token=$(echo "$body" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+        # Extract token for next test - use jq if available, fallback to regex
+        if command -v jq &> /dev/null; then
+            token=$(echo "$body" | jq -r '.token // empty' 2>/dev/null)
+        else
+            # Fallback: extract token using sed (more robust than grep/cut)
+            token=$(echo "$body" | sed -n 's/.*"token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+        fi
     else
         log_error "  ✗ Login failed (HTTP $http_code): $body"
         ((failed++))
