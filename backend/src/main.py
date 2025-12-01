@@ -5,7 +5,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
@@ -78,6 +78,16 @@ app.add_middleware(
 @app.get("/api")
 def read_root():
     return {"message": "Welcome to VittCott Backend!"}
+
+
+# ---------- Redirect signup/login routes to Node backend ----------
+@app.get("/pages/create-account.html")
+async def redirect_signup():
+    return RedirectResponse(url="http://localhost:3000/pages/create-account.html")
+
+@app.get("/pages/login.html")
+async def redirect_login():
+    return RedirectResponse(url="http://localhost:3000/pages/login.html")
 
 
 # ---------- AI Route ----------

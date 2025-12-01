@@ -24,10 +24,18 @@
           <a href="/pages/create-account.html">Create Account</a>
         </div>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3" id="auth-section">
         <!-- header assistant button (opens modal) -->
         <button id="open-ai-btn" class="px-3 py-2 bg-indigo-600 rounded">Assistant</button>
-        <a href="/pages/create-account.html" class="px-3 py-2 bg-indigo-500 rounded">Login / Signup</a>
+        <!-- Logged out state (default) -->
+        <div id="logged-out-btns">
+          <a href="http://localhost:3000/pages/create-account.html" class="px-3 py-2 bg-indigo-500 rounded">Login / Signup</a>
+        </div>
+        <!-- Logged in state (hidden by default) -->
+        <div id="logged-in-section" class="hidden flex items-center gap-3">
+          <span id="welcome-text" class="text-gray-300"></span>
+          <button id="logout-btn" class="px-3 py-2 bg-red-500 hover:bg-red-600 rounded">Logout</button>
+        </div>
       </div>
     </div>
   </nav>
@@ -186,7 +194,56 @@
       if (window.feather) feather.replace();
       if (window.AOS) AOS.init({duration:700});
       document.getElementById('year').textContent = new Date().getFullYear();
+      
+      // Check if user is logged in
+      checkAuthStatus();
     });
+
+    // Check authentication status and update UI
+    function checkAuthStatus() {
+      const token = localStorage.getItem('vittcott_token');
+      const userStr = localStorage.getItem('vittcott_user');
+      
+      const loggedOutBtns = document.getElementById('logged-out-btns');
+      const loggedInSection = document.getElementById('logged-in-section');
+      const welcomeText = document.getElementById('welcome-text');
+      const logoutBtn = document.getElementById('logout-btn');
+      
+      if (token && userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const displayName = user.displayName || user.email.split('@')[0];
+          
+          // Show logged in state
+          loggedOutBtns.classList.add('hidden');
+          loggedInSection.classList.remove('hidden');
+          welcomeText.textContent = `Welcome, ${displayName}!`;
+          
+          // Wire logout button
+          logoutBtn.addEventListener('click', logout);
+        } catch (e) {
+          console.error('Failed to parse user data:', e);
+          showLoggedOut();
+        }
+      } else {
+        showLoggedOut();
+      }
+    }
+
+    function showLoggedOut() {
+      const loggedOutBtns = document.getElementById('logged-out-btns');
+      const loggedInSection = document.getElementById('logged-in-section');
+      
+      loggedOutBtns.classList.remove('hidden');
+      loggedInSection.classList.add('hidden');
+    }
+
+    function logout() {
+      localStorage.removeItem('vittcott_token');
+      localStorage.removeItem('vittcott_user');
+      alert('Logged out successfully!');
+      showLoggedOut();
+    }
   </script>
 
   <script src="/assets/js/app.js"></script>

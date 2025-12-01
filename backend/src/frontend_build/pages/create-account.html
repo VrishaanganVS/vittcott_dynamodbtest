@@ -18,7 +18,7 @@
       </a>
       <div class="space-x-4">
         <a href="../../public/index.html" class="text-indigo-300 hover:text-indigo-100">Home</a>
-        <a href="../auth/login.html" class="text-gray-300 hover:text-white">Sign in</a>
+        <a href="login.html" class="text-gray-300 hover:text-white">Sign in</a>
       </div>
     </nav>
 
@@ -59,7 +59,7 @@
               <input id="tos" type="checkbox" required class="h-4 w-4 rounded bg-gray-700" />
               <label for="tos" class="text-xs text-gray-400">I agree to the <a href="#" class="text-indigo-300">Terms</a>.</label>
             </div>
-            <a href="../auth/login.html" class="text-xs text-indigo-300">Already have an account?</a>
+            <a href="login.html" class="text-xs text-indigo-300">Already have an account?</a>
           </div>
 
           <div class="flex gap-2 justify-between items-center">
@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (res.status === 201) {
           alert("Account created successfully!");
-          window.location.href = "../auth/login.html";
+          window.location.href = "login.html";
         } else {
           alert("Registration failed: " + (data.error || JSON.stringify(data)));
         }
