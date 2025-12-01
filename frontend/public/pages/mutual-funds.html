@@ -5,21 +5,120 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>VittCott — Mutual Funds</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js" defer></script>
     <link rel="stylesheet" href="/assets/css/styles.css">
 </head>
 <body class="bg-gray-900 text-gray-100">
-<nav class="bg-gray-800 p-3">
-    <div class="max-w-6xl mx-auto px-4 flex justify-between">
-        <a href="/public/index.html" class="font-bold">VittCott</a>
-        <a href="/public/index.html" class="text-indigo-400">Home</a>
+<nav class="bg-gray-800 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i data-feather="trending-up" class="text-indigo-500"></i>
+        <a href="../index.html" class="text-xl font-bold">VittCott</a>
+        <div class="hidden sm:flex gap-4 ml-6 text-gray-300">
+          <a href="../index.html" class="hover:text-white">Home</a>
+          <a href="stocks.html" class="hover:text-white">Stocks</a>
+          <a href="mutual-funds.html" class="text-indigo-400">Mutual Funds</a>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="../index.html" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded">Back to Home</a>
+      </div>
     </div>
 </nav>
+
 <main class="max-w-6xl mx-auto px-4 py-8">
-    <h1 class="text-2xl font-bold mb-4">Mutual Funds</h1>
-    <p class="text-gray-400">Browse SIP suggestions and fund categories (demo).</p>
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold mb-2">Mutual Funds</h1>
+        <p class="text-gray-400">Explore SIP plans and mutual fund categories for long-term wealth creation</p>
+    </div>
+
+    <!-- Categories -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4">Popular Categories</h2>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-gradient-to-br from-blue-600/20 to-transparent border border-gray-700 rounded-xl p-6 hover:border-blue-500 transition-all cursor-pointer card-hover">
+                <i data-feather="trending-up" class="text-blue-400 mb-3"></i>
+                <h3 class="text-lg font-semibold mb-1">Equity Funds</h3>
+                <p class="text-sm text-gray-400">High growth potential</p>
+            </div>
+            <div class="bg-gradient-to-br from-green-600/20 to-transparent border border-gray-700 rounded-xl p-6 hover:border-green-500 transition-all cursor-pointer card-hover">
+                <i data-feather="shield" class="text-green-400 mb-3"></i>
+                <h3 class="text-lg font-semibold mb-1">Debt Funds</h3>
+                <p class="text-sm text-gray-400">Stable returns</p>
+            </div>
+            <div class="bg-gradient-to-br from-yellow-600/20 to-transparent border border-gray-700 rounded-xl p-6 hover:border-yellow-500 transition-all cursor-pointer card-hover">
+                <i data-feather="pie-chart" class="text-yellow-400 mb-3"></i>
+                <h3 class="text-lg font-semibold mb-1">Hybrid Funds</h3>
+                <p class="text-sm text-gray-400">Balanced approach</p>
+            </div>
+            <div class="bg-gradient-to-br from-purple-600/20 to-transparent border border-gray-700 rounded-xl p-6 hover:border-purple-500 transition-all cursor-pointer card-hover">
+                <i data-feather="globe" class="text-purple-400 mb-3"></i>
+                <h3 class="text-lg font-semibold mb-1">Index Funds</h3>
+                <p class="text-sm text-gray-400">Market tracking</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Funds -->
+    <div>
+        <h2 class="text-2xl font-semibold mb-4">Top Performing Funds</h2>
+        <div id="funds-list" class="grid gap-4"></div>
+    </div>
 </main>
+
 <script>
+    const funds = [
+        {name: 'HDFC Top 100 Fund', category: 'Equity', returns_1y: 18.5, returns_3y: 15.2, minSIP: 500, rating: 5, aum: '₹15,420 Cr'},
+        {name: 'ICICI Prudential Bluechip Fund', category: 'Equity', returns_1y: 17.8, returns_3y: 14.9, minSIP: 1000, rating: 4, aum: '₹38,250 Cr'},
+        {name: 'SBI Small Cap Fund', category: 'Equity', returns_1y: 22.3, returns_3y: 19.1, minSIP: 500, rating: 5, aum: '₹9,850 Cr'},
+        {name: 'Axis Long Term Equity Fund', category: 'ELSS', returns_1y: 16.4, returns_3y: 13.8, minSIP: 500, rating: 4, aum: '₹29,100 Cr'},
+        {name: 'Mirae Asset Emerging Bluechip', category: 'Equity', returns_1y: 19.7, returns_3y: 16.5, minSIP: 1000, rating: 5, aum: '₹22,340 Cr'},
+        {name: 'Kotak Standard Multicap Fund', category: 'Equity', returns_1y: 15.9, returns_3y: 13.2, minSIP: 1000, rating: 4, aum: '₹7,560 Cr'},
+    ];
+
+    const list = document.getElementById('funds-list');
+    funds.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-800 p-6 rounded-xl border border-gray-700 hover:border-indigo-500 transition-all duration-300';
+        const stars = '★'.repeat(f.rating) + '☆'.repeat(5 - f.rating);
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold text-white mb-1">${f.name}</h3>
+                    <div class="flex gap-2 items-center text-sm">
+                        <span class="px-2 py-1 rounded bg-indigo-600/30 text-indigo-300">${f.category}</span>
+                        <span class="text-yellow-400">${stars}</span>
+                    </div>
+                </div>
+                <div class="text-right text-sm text-gray-400">
+                    <div>AUM</div>
+                    <div class="font-semibold text-white">${f.aum}</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <div>
+                    <div class="text-xs text-gray-500">1Y Returns</div>
+                    <div class="text-lg font-bold text-green-400">${f.returns_1y}%</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500">3Y Returns</div>
+                    <div class="text-lg font-bold text-green-400">${f.returns_3y}%</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500">Min SIP</div>
+                    <div class="text-lg font-bold text-white">₹${f.minSIP}</div>
+                </div>
+            </div>
+            <button class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition-colors">
+                Start SIP
+            </button>
+        `;
+        list.appendChild(card);
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
+        if (window.feather) feather.replace();
     });
 </script>
 </body>

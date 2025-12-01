@@ -10,35 +10,98 @@
   <link rel="stylesheet" href="/assets/css/styles.css">
 </head>
 <body class="bg-gray-900 text-gray-100">
-  <nav class="bg-gray-800 p-3">
-    <div class="max-w-6xl mx-auto px-4 flex justify-between">
-      <a href="/public/index.html" class="font-bold">VittCott</a>
-      <a href="/public/index.html" class="text-indigo-400">Home</a>
+  <nav class="bg-gray-800 sticky top-0 z-40">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i data-feather="trending-up" class="text-indigo-500"></i>
+        <a href="../index.html" class="text-xl font-bold">VittCott</a>
+        <div class="hidden sm:flex gap-4 ml-6 text-gray-300">
+          <a href="../index.html" class="hover:text-white">Home</a>
+          <a href="stocks.html" class="text-indigo-400">Stocks</a>
+          <a href="mutual-funds.html" class="hover:text-white">Mutual Funds</a>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="../index.html" class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded">Back to Home</a>
+      </div>
     </div>
   </nav>
 
   <main class="max-w-6xl mx-auto px-4 py-8">
-    <h1 class="text-2xl font-bold mb-4">Stocks</h1>
-    <div id="stocks-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold mb-2">Stocks Market</h1>
+      <p class="text-gray-400">Track and invest in top Indian stocks with real-time updates</p>
+    </div>
+    
+    <!-- Search and Filter -->
+    <div class="mb-6 flex gap-4 flex-wrap">
+      <input type="text" id="search-stock" placeholder="Search stocks..." class="flex-1 min-w-[200px] px-4 py-2 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      <select class="px-4 py-2 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option>All Sectors</option>
+        <option>Technology</option>
+        <option>Banking</option>
+        <option>Energy</option>
+      </select>
+    </div>
+
+    <!-- Stocks Grid -->
+    <div id="stocks-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
   </main>
 
-  <script src="/assets/js/app.js"></script>
   <script>
-    // simple client-side stocks demo
+    // Enhanced stocks demo with better UI
     const stocks = [
-      {symbol:'RELI', name:'Reliance', price:'2350', change:1.2},
-      {symbol:'TCS', name:'TCS', price:'3200', change:-0.4},
-      {symbol:'INFY', name:'Infosys', price:'1400', change:0.9},
-      {symbol:'HDFC', name:'HDFC', price:'2600', change:0.1},
-      {symbol:'LT', name:'Larsen & Toubro', price:'2900', change:-0.6},
+      {symbol:'RELIANCE', name:'Reliance Industries', price:'2,450', change:1.2, sector:'Energy', volume:'12.5M'},
+      {symbol:'TCS', name:'Tata Consultancy Services', price:'3,280', change:-0.4, sector:'Technology', volume:'8.2M'},
+      {symbol:'INFY', name:'Infosys', price:'1,425', change:0.9, sector:'Technology', volume:'9.8M'},
+      {symbol:'HDFCBANK', name:'HDFC Bank', price:'1,650', change:0.5, sector:'Banking', volume:'15.3M'},
+      {symbol:'LT', name:'Larsen & Toubro', price:'2,920', change:-0.6, sector:'Infrastructure', volume:'5.7M'},
+      {symbol:'WIPRO', name:'Wipro', price:'445', change:1.8, sector:'Technology', volume:'6.1M'},
+      {symbol:'ITC', name:'ITC Limited', price:'412', change:0.3, sector:'FMCG', volume:'11.4M'},
+      {symbol:'ICICIBANK', name:'ICICI Bank', price:'985', change:1.1, sector:'Banking', volume:'13.8M'},
+      {symbol:'BHARTIARTL', name:'Bharti Airtel', price:'1,235', change:-0.2, sector:'Telecom', volume:'7.9M'},
     ];
+    
     const list = document.getElementById('stocks-list');
     stocks.forEach(s=>{
       const card = document.createElement('div');
-      card.className = 'bg-gray-800 p-4 rounded';
-      card.innerHTML = `<div class="flex justify-between items-center"><div><div class="font-semibold">${s.symbol}</div><div class="text-sm text-gray-400">${s.name}</div></div><div class="text-right"><div class="font-bold">₹${s.price}</div><div class="${s.change>=0?'text-green-400':'text-red-400'} text-sm">${s.change}%</div></div></div>`;
+      card.className = 'bg-gray-800 p-6 rounded-xl border border-gray-700 hover:border-indigo-500 transition-all duration-300 card-hover';
+      const changeColor = s.change >= 0 ? 'text-green-400' : 'text-red-400';
+      const changeIcon = s.change >= 0 ? '↑' : '↓';
+      card.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <div class="text-xl font-bold text-white">${s.symbol}</div>
+            <div class="text-sm text-gray-400">${s.name}</div>
+          </div>
+          <div class="px-2 py-1 rounded text-xs bg-gray-700 text-gray-300">${s.sector}</div>
+        </div>
+        <div class="flex justify-between items-end">
+          <div>
+            <div class="text-2xl font-bold text-white">₹${s.price}</div>
+            <div class="text-xs text-gray-500">Vol: ${s.volume}</div>
+          </div>
+          <div class="${changeColor} text-lg font-semibold">
+            ${changeIcon} ${Math.abs(s.change)}%
+          </div>
+        </div>
+        <button class="mt-4 w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition-colors">
+          View Details
+        </button>
+      `;
       list.appendChild(card);
     });
+    
+    // Search functionality
+    document.getElementById('search-stock').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      document.querySelectorAll('#stocks-list > div').forEach((card, i) => {
+        const stock = stocks[i];
+        const matches = stock.symbol.toLowerCase().includes(query) || stock.name.toLowerCase().includes(query);
+        card.style.display = matches ? 'block' : 'none';
+      });
+    });
+    
     document.addEventListener('DOMContentLoaded',()=>{ if(window.feather) feather.replace(); });
   </script>
 </body>

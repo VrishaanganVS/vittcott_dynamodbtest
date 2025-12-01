@@ -61,10 +61,10 @@ if st.session_state.stocks:
             st.session_state["stock_name"] = s["name"]
             st.session_state["stock_qty"] = s["quantity"]
             st.session_state.stocks.pop(i)
-            st.experimental_rerun()
+            st.rerun()
         if col3.button("Remove", key=f"remove_stock_{i}"):
             st.session_state.stocks.pop(i)
-            st.experimental_rerun()
+            st.rerun()
 
 st.sidebar.subheader("Mutual Funds")
 mf_name = st.sidebar.text_input("Mutual Fund name (e.g., SBI Bluechip)", key="mf_name")
@@ -79,10 +79,10 @@ if st.session_state.mutual_funds:
             st.session_state["mf_name"] = m["name"]
             st.session_state["mf_amt"] = m["amount"]
             st.session_state.mutual_funds.pop(i)
-            st.experimental_rerun()
+            st.rerun()
         if col3.button("Remove", key=f"remove_mf_{i}"):
             st.session_state.mutual_funds.pop(i)
-            st.experimental_rerun()
+            st.rerun()
 
 st.sidebar.subheader("Cash")
 st.session_state.cash = st.sidebar.number_input("Cash (₹)", min_value=0, step=100, value=st.session_state.cash, key="cash_input")

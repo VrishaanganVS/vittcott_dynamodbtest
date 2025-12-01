@@ -12,12 +12,12 @@
 <body class="bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-gray-100 min-h-screen flex items-center">
   <div class="max-w-3xl mx-auto w-full px-6">
     <nav class="flex items-center justify-between mb-6">
-      <a href="../../public/index.html" class="flex items-center gap-3">
-        <img src="../assets/logo.png" alt="VittCott" class="h-10 w-10 rounded-md shadow" />
+      <a href="../index.html" class="flex items-center gap-3">
+        <i data-feather="trending-up" class="text-indigo-500"></i>
         <span class="font-bold text-xl">VittCott</span>
       </a>
       <div class="space-x-4">
-        <a href="../../public/index.html" class="text-indigo-300 hover:text-indigo-100">Home</a>
+        <a href="../index.html" class="text-indigo-300 hover:text-indigo-100">Home</a>
         <a href="login.html" class="text-gray-300 hover:text-white">Sign in</a>
       </div>
     </nav>
@@ -26,12 +26,16 @@
       <section class="hidden md:flex flex-col gap-4 p-6 rounded-2xl bg-gradient-to-tr from-indigo-700/20 to-transparent border border-gray-700">
         <h2 class="text-2xl font-semibold">Welcome to VittCott</h2>
         <p class="text-sm text-gray-300">Create an account to save and manage your portfolios and uploads (demo only).</p>
-        <ul class="text-sm text-gray-300 list-disc pl-5">
-          <li>Secure login</li>
-          <li>Upload & store files</li>
-          <li>Realtime analytics</li>
+        <ul class="text-sm text-gray-300 list-disc pl-5 space-y-2">
+          <li>Secure authentication with JWT</li>
+          <li>Portfolio management & tracking</li>
+          <li>Real-time market analytics</li>
+          <li>AI-powered investment insights</li>
         </ul>
-        <img src="../assets/hero-placeholder.jpg" alt="hero" class="mt-auto rounded-lg shadow" />
+        <div class="mt-auto p-6 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 rounded-lg border border-indigo-500/30">
+          <i data-feather="bar-chart-2" class="text-indigo-400 mb-2"></i>
+          <p class="text-xs text-gray-400">Join thousands of students building their financial future with VittCott</p>
+        </div>
       </section>
 
       <section class="bg-gray-800/60 backdrop-blur p-6 rounded-2xl border border-gray-700 shadow-md">
