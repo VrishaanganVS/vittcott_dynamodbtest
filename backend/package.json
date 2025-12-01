@@ -6,7 +6,11 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "create-table": "node create_table.js",
+    "get-user": "node get_user_by_email.js",
+    "sync-frontend": "node copy_frontend.js",
+    "dev": "node copy_frontend.js && node server.js"
   },
   "keywords": [],
   "author": "",

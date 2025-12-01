@@ -122,7 +122,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         console.log("Submitting to backend:", { email, displayName: fullName });
-        const res = await fetch("http://localhost:3000/register", {
+        // If the page is opened via file:// use the local backend, otherwise use a relative path
+        const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000' : '';
+        const res = await fetch(`${API_BASE}/register`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -148,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       } catch (err) {
         console.error("Network error:", err);
-        alert("Could not connect to server. Is backend running on http://localhost:3000 ?");
+        alert("Could not connect to server. Is the backend running and reachable?");
       }
     });
   }

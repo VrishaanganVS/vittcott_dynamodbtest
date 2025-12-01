@@ -1,0 +1,13 @@
+[dotenv@17.2.3] injecting env (11) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[
+  {
+    "userId": "6415067b-95b9-43d8-81ba-71a915e28b62",
+    "isEmailVerified": false,
+    "email": "dev+1764604630@example.com",
+    "createdAt": "2025-12-01T10:27:09.922Z",
+    "displayName": "Dev Tester",
+    "hashedPassword": "$2b$10$ZZJc.UmsMHol00V6JCAEw..f8wPkH6hLEu5FujGXfK6KYcB1hmk3m",
+    "s3Keys": [],
+    "pk": "USER#6415067b-95b9-43d8-81ba-71a915e28b62"
+  }
+]

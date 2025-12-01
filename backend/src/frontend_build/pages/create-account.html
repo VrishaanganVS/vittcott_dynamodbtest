@@ -74,11 +74,13 @@
 
   <script>
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("create-account script running");
   if (window.feather) feather.replace();
 
   const form = document.getElementById("signup-form");
   const toggle = document.getElementById("toggle-pass");
   const pass = document.getElementById("pass");
+  const demoBtn = document.getElementById("demo");
 
   // Password toggle
   if (toggle && pass) {
@@ -94,51 +96,66 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Demo button: quick fill (keeps demo flow optional)
+  if (demoBtn && form) {
+    demoBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      if (document.getElementById("name")) document.getElementById("name").value = "Demo User";
+      if (document.getElementById("email")) document.getElementById("email").value = "demo@example.com";
+      if (document.getElementById("pass")) document.getElementById("pass").value = "demopass";
+    });
+  }
+
   // REAL backend signup
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    const fullName = document.getElementById("name").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("pass").value.trim();
+      const fullName = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("pass").value.trim();
 
-    if (!email || !password) {
-      alert("Email and password are required.");
-      return;
-    }
-
-    try {
-      const res = await fetch("http://localhost:3000/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          displayName: fullName,
-          email: email,
-          password: password
-        })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("Register failed", data);
-        alert("Registration failed: " + (data.error || "Unknown error"));
+      if (!email || !password) {
+        alert("Email and password are required.");
         return;
       }
 
-      alert("Account created successfully!");
-      window.location.href = "../auth/login.html";
+      try {
+        console.log("Submitting to backend:", { email, displayName: fullName });
+        // If the page is opened via file:// use the local backend, otherwise use a relative path
+        const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000' : '';
+        const res = await fetch(`${API_BASE}/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            displayName: fullName,
+            email: email,
+            password: password
+          })
+        });
 
-    } catch (err) {
-      console.error("Network error:", err);
-      alert("Could not connect to server. Is backend running?");
-    }
-  });
+        const text = await res.text().catch(()=>"");
+        let data = {};
+        try { data = text ? JSON.parse(text) : {}; } catch(e) { data = { raw: text }; }
+
+        console.log("Backend response status:", res.status, "body:", data);
+
+        if (res.status === 201) {
+          alert("Account created successfully!");
+          window.location.href = "../auth/login.html";
+        } else {
+          alert("Registration failed: " + (data.error || JSON.stringify(data)));
+        }
+      } catch (err) {
+        console.error("Network error:", err);
+        alert("Could not connect to server. Is the backend running and reachable?");
+      }
+    });
+  }
 });
 </script>
-
 
 </body>
 </html>

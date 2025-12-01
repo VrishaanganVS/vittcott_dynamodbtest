@@ -108,7 +108,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      const res = await fetch("http://localhost:3000/register", {
+      // Choose API base depending on how frontend is served:
+      // - If opened via file:// (no origin), call local backend on :3000
+      // - Otherwise use relative path so same-origin deploys work.
+      const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:3000' : '';
+      const res = await fetch(`${API_BASE}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

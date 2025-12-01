@@ -1,0 +1,2 @@
+[dotenv@17.2.3] injecting env (11) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+📦 Serving frontend static from E:\Vrishaangan\GitHub\vittcott_dynamodbtest\frontend\public
