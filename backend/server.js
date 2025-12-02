@@ -134,13 +134,6 @@ try {
   if (fs.existsSync(STATIC_DIR)) {
     console.log('📦 Serving static frontend from', STATIC_DIR);
     app.use(express.static(STATIC_DIR));
-    // SPA fallback for GET requests not matching API routes
-    app.get('*', (req, res, next) => {
-      if (req.method !== 'GET') return next();
-      const indexPath = path.join(STATIC_DIR, 'index.html');
-      if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
-      return next();
-    });
   }
 } catch (err) {
   console.warn('Could not set up static frontend serving:', err && err.message ? err.message : err);

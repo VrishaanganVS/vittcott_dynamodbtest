@@ -1,34 +1,31 @@
-output "alb_dns_name" {
-  description = "DNS name of the Application Load Balancer"
-  value       = aws_lb.main.dns_name
-}
-
-output "node_backend_url" {
-  description = "URL for Node backend"
-  value       = "http://${aws_lb.main.dns_name}:3000"
-}
-
-output "python_backend_url" {
-  description = "URL for Python backend"
-  value       = "http://${aws_lb.main.dns_name}:8000"
-}
-
-output "streamlit_url" {
-  description = "URL for Streamlit"
-  value       = "http://${aws_lb.main.dns_name}:8501"
-}
+# Outputs for the simplified infrastructure
 
 output "dynamodb_table_name" {
-  description = "DynamoDB table name"
+  description = "Name of the DynamoDB users table"
   value       = aws_dynamodb_table.users.name
 }
 
-output "ecs_cluster_name" {
-  description = "ECS cluster name"
-  value       = aws_ecs_cluster.main.name
+output "dynamodb_table_arn" {
+  description = "ARN of the DynamoDB users table"
+  value       = aws_dynamodb_table.users.arn
 }
 
-output "vpc_id" {
-  description = "VPC ID"
-  value       = aws_vpc.main.id
+output "s3_bucket_name" {
+  description = "Name of the S3 uploads bucket"
+  value       = aws_s3_bucket.uploads.id
+}
+
+output "s3_bucket_arn" {
+  description = "ARN of the S3 uploads bucket"
+  value       = aws_s3_bucket.uploads.arn
+}
+
+output "aws_region" {
+  description = "AWS region being used"
+  value       = var.aws_region
+}
+
+output "environment" {
+  description = "Environment name"
+  value       = var.environment
 }

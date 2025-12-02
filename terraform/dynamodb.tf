@@ -1,8 +1,8 @@
 # DynamoDB Table for Users
 resource "aws_dynamodb_table" "users" {
-  name           = var.dynamodb_table_name
-  billing_mode   = "PAY_PER_REQUEST" # On-demand pricing
-  hash_key       = "pk"
+  name         = var.dynamodb_table_name
+  billing_mode = "PAY_PER_REQUEST" # On-demand pricing
+  hash_key     = "pk"
 
   attribute {
     name = "pk"
