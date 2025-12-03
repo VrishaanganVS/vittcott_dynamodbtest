@@ -18,6 +18,7 @@ from config import settings
 from config.logging_config import logger
 from controllers.ai_controller import handle_ai_ask
 from models.ai_models import AskRequest, AskResponse
+from routes.stocks import router as stocks_router
 
 # ---------- Lifespan ----------
 @asynccontextmanager
@@ -55,6 +56,9 @@ async def lifespan(app: FastAPI):
 
 # ---------- App ----------
 app = FastAPI(title="VITTCOTT Unified Backend", version="1.0", lifespan=lifespan)
+
+# Include routers
+app.include_router(stocks_router, prefix="/api", tags=["stocks"])
 
 # ---------- CORS ----------
 app.add_middleware(
@@ -96,7 +100,6 @@ async def ai_ask(req: AskRequest, request: Request):
     """AI Assistant endpoint."""
     text = await handle_ai_ask(req.query, req.portfolio)
     return {"response_text": text}
-
 
 # ---------- FinanceHub Proxy ----------
 @app.get("/api/finance/quote")
