@@ -31,8 +31,8 @@ class PortfolioService:
             DataFrame with portfolio data
         """
         try:
-            # S3 key structure: portfolios/{user_id}/{filename}
-            s3_key = f"portfolios/{user_id}/{filename}"
+            # S3 key structure: users/{user_id}/{filename}
+            s3_key = f"users/{user_id}/{filename}"
             
             logger.info(f"Fetching portfolio from S3: {s3_key}")
             
@@ -47,11 +47,15 @@ class PortfolioService:
             
             # Parse based on file extension
             if filename.endswith('.xlsx') or filename.endswith('.xls'):
-                df = pd.read_excel(io.BytesIO(file_content))
+                # Read Excel file and auto-detect header row
+                df = self._read_excel_with_auto_header(io.BytesIO(file_content))
             elif filename.endswith('.csv'):
                 df = pd.read_csv(io.BytesIO(file_content))
             else:
                 raise ValueError(f"Unsupported file format: {filename}")
+            
+            # Normalize column names to handle different formats (Groww, Zerodha, etc.)
+            df = self._normalize_columns(df)
             
             logger.info(f"Successfully parsed portfolio with {len(df)} rows")
             return df
@@ -71,7 +75,7 @@ class PortfolioService:
             List of portfolio files with metadata
         """
         try:
-            prefix = f"portfolios/{user_id}/"
+            prefix = f"users/{user_id}/"
             
             response = self.s3_client.list_objects_v2(
                 Bucket=self.bucket_name,
@@ -99,31 +103,121 @@ class PortfolioService:
             logger.error(f"Error listing portfolios: {str(e)}")
             raise
     
-    def analyze_portfolio(self, df: pd.DataFrame) -> Dict:
+    def _read_excel_with_auto_header(self, file_content) -> pd.DataFrame:
+        """
+        Read Excel file and automatically detect the header row.
+        Handles files with title rows, summary rows, etc. (Groww format)
+        """
+        # Read all rows without headers first
+        df_raw = pd.read_excel(file_content, header=None)
+        file_content.seek(0)
+        
+        # Look for the row containing "Stock Name" and "Quantity"
+        for i in range(len(df_raw)):
+            row_values = [str(x).lower() for x in df_raw.iloc[i].values if pd.notna(x)]
+            row_str = ' '.join(row_values)
+            
+            # Check if this row has stock data headers
+            if 'stock' in row_str and 'quantity' in row_str and ('average' in row_str or 'price' in row_str):
+                logger.info(f"Found stock data headers at row {i}")
+                # Read the file with the correct header row
+                df = pd.read_excel(file_content, skiprows=i)
+                file_content.seek(0)
+                
+                # Remove any completely empty rows
+                df = df.dropna(how='all')
+                
+                # Remove rows where Stock Name is NaN
+                if 'Stock Name' in df.columns:
+                    df = df[df['Stock Name'].notna()]
+                elif df.columns[0] in ['Stock Name', 'stock name', 'Stock name']:
+                    df = df[df[df.columns[0]].notna()]
+                
+                return df
+        
+        # If no specific header found, use default
+        file_content.seek(0)
+        logger.warning("No stock data headers found, using default parsing")
+        return pd.read_excel(file_content)
+    
+    def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normalize column names from different broker formats to standard format
+        
+        Standard format:
+        - symbol: Stock symbol/name
+        - quantity: Number of shares
+        - purchase_price: Average buy price per share
+        - current_price: Current market price (optional)
+        
+        Supported formats:
+        - Groww: 'Stock Name', 'Quantity', 'Average buy price', 'Closing price'
+        - Zerodha: 'Tradingsymbol', 'Quantity', 'Average price', 'LTP'
+        - Generic: 'symbol', 'quantity', 'purchase_price', 'current_price'
+        """
+        # Column mapping for different formats
+        column_mappings = {
+            # Groww format
+            'Stock Name': 'symbol',
+            'stock name': 'symbol',
+            'Quantity': 'quantity',
+            'quantity': 'quantity',
+            'Average buy price': 'purchase_price',
+            'average buy price': 'purchase_price',
+            'Closing price': 'current_price',
+            'closing price': 'current_price',
+            'Closing Price': 'current_price',
+            
+            # Zerodha format
+            'Tradingsymbol': 'symbol',
+            'tradingsymbol': 'symbol',
+            'Average price': 'purchase_price',
+            'average price': 'purchase_price',
+            'LTP': 'current_price',
+            'ltp': 'current_price',
+            
+            # Standard format (already correct)
+            'symbol': 'symbol',
+            'Symbol': 'symbol',
+            'purchase_price': 'purchase_price',
+            'current_price': 'current_price'
+        }
+        
+        # Rename columns based on mapping
+        df_renamed = df.rename(columns=column_mappings)
+        
+        # Verify required columns exist
+        required_cols = ['symbol', 'quantity', 'purchase_price']
+        missing_cols = [col for col in required_cols if col not in df_renamed.columns]
+        
+        if missing_cols:
+            available_cols = list(df.columns)
+            raise ValueError(
+                f"Missing required columns: {missing_cols}. "
+                f"Available columns in file: {available_cols}. "
+                f"Please ensure your file has: Stock Name, Quantity, and Average buy price (or equivalent)."
+            )
+        
+        # Keep only relevant columns
+        keep_cols = ['symbol', 'quantity', 'purchase_price']
+        if 'current_price' in df_renamed.columns:
+            keep_cols.append('current_price')
+        
+        return df_renamed[keep_cols]
+    
+    async def analyze_portfolio(self, df: pd.DataFrame) -> Dict:
         """
         Analyze portfolio data and calculate metrics
         
-        Expected columns: symbol, quantity, purchase_price, current_price
+        Expected columns: symbol, quantity, purchase_price, current_price (optional)
         
         Args:
-            df: Portfolio DataFrame
+            df: Portfolio DataFrame (already normalized)
             
         Returns:
             Dictionary with analysis metrics
         """
         try:
-            # Ensure required columns exist
-            required_cols = ['symbol', 'quantity', 'purchase_price']
-            missing_cols = [col for col in required_cols if col not in df.columns]
-            
-            if missing_cols:
-                # Try case-insensitive matching
-                df.columns = df.columns.str.lower().str.strip()
-                missing_cols = [col for col in required_cols if col not in df.columns]
-                
-                if missing_cols:
-                    raise ValueError(f"Missing required columns: {missing_cols}")
-            
             # Calculate investment value
             df['invested_value'] = df['quantity'] * df['purchase_price']
             

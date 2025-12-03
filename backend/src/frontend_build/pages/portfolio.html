@@ -166,7 +166,7 @@
                     </button>
                 </div>
             </div>
-            <p class="text-xs text-gray-500 mt-3">💡 Upload your portfolio to S3 at: s3://vittcott-portfolios/portfolios/&lt;username&gt;/</p>
+            <p class="text-xs text-gray-500 mt-3">💡 Upload your portfolio to S3 at: s3://vittcott-uploads-xyz123/users/&lt;username&gt;/</p>
         </div>
 
         <!-- Loading State -->
@@ -262,8 +262,10 @@
 
             try {
                 const userData = JSON.parse(userDataStr);
-                currentUsername = userData.username || userData.email || 'unknown';
-                document.getElementById('currentUser').textContent = currentUsername;
+                const fullEmail = userData.username || userData.email || 'unknown';
+                // Extract username before @ for S3 path (e.g., vaibhav@gmail.com -> vaibhav)
+                currentUsername = fullEmail.split('@')[0];
+                document.getElementById('currentUser').textContent = fullEmail;
 
                 // Load available portfolios from S3
                 await loadPortfolioList(currentUsername);

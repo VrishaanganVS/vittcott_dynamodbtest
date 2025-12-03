@@ -52,7 +52,7 @@ async def analyze_portfolio(request_body: PortfolioAnalysisRequest, app_request:
         )
         
         # Analyze portfolio data
-        analysis = portfolio_service.analyze_portfolio(df)
+        analysis = await portfolio_service.analyze_portfolio(df)
         
         # Generate AI insights
         model = app_request.app.state.model

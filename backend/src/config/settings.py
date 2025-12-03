@@ -13,7 +13,7 @@ FINANCEHUB_API_KEY = os.getenv("FINANCEHUB_API_KEY")
 AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-S3_PORTFOLIO_BUCKET = os.getenv("S3_PORTFOLIO_BUCKET", "vittcott-portfolios")
+S3_PORTFOLIO_BUCKET = os.getenv("S3_PORTFOLIO_BUCKET", "vittcott-uploads-xyz123")
 
 # CORS and Frontend
 FRONTEND_ORIGINS = os.getenv("FRONTEND_ORIGINS", "http://localhost:3000")
