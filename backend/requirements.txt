@@ -19,7 +19,12 @@ python-dotenv
 # AI model SDK
 google-generativeai
 
-# Finance data fallback
+# Finance data
 yfinance
 pandas
 numpy
+openpyxl
+
+# AWS SDK
+boto3
+botocore

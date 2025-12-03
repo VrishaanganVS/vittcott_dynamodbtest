@@ -19,6 +19,7 @@ from config.logging_config import logger
 from controllers.ai_controller import handle_ai_ask
 from models.ai_models import AskRequest, AskResponse
 from routes.stocks import router as stocks_router
+from routes.portfolio import router as portfolio_router
 
 # ---------- Lifespan ----------
 @asynccontextmanager
@@ -59,6 +60,7 @@ app = FastAPI(title="VITTCOTT Unified Backend", version="1.0", lifespan=lifespan
 
 # Include routers
 app.include_router(stocks_router, prefix="/api", tags=["stocks"])
+app.include_router(portfolio_router, prefix="/api", tags=["portfolio"])
 
 # ---------- CORS ----------
 app.add_middleware(

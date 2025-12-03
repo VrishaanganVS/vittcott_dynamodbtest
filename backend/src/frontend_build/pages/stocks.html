@@ -114,13 +114,17 @@
             <div class="flex gap-6 items-center">
                 <a href="/index.html" class="hover:text-indigo-400 transition-all duration-300 font-medium">Dashboard</a>
                 <a href="/pages/stocks.html" class="text-indigo-400 font-medium">Stocks</a>
+                <a href="/pages/portfolio.html" class="hover:text-indigo-400 transition-all duration-300 font-medium">Portfolio</a>
                 <a href="http://localhost:8501" target="_blank" class="hover:text-indigo-400 transition-all duration-300 font-medium">AI Assistant</a>
             </div>
         </div>
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 py-8">
-        <h1 class="text-4xl font-bold mb-8 gradient-text">Real-Time Stock Market</h1>
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold gradient-text">Real-Time Stock Market</h1>
+            <p class="text-gray-400 mt-2" id="userGreeting">Loading...</p>
+        </div>
 
         <div id="market-status" class="market-status flex justify-between items-center">
             <div>
@@ -144,11 +148,27 @@
 
     <script>
         let allStocks = [];
-        let refreshInterval;
+        let refreshInterval = null;
+
+        // Auto-detect logged in user
+        window.addEventListener('DOMContentLoaded', () => {
+            const userDataStr = localStorage.getItem('vittcott_user');
+            if (userDataStr) {
+                try {
+                    const userData = JSON.parse(userDataStr);
+                    const username = userData.username || userData.email || 'Guest';
+                    document.getElementById('userGreeting').textContent = `Welcome back, ${username}! Track live prices and market indices`;
+                } catch (e) {
+                    document.getElementById('userGreeting').textContent = 'Track live prices and market indices';
+                }
+            } else {
+                document.getElementById('userGreeting').textContent = 'Track live prices and market indices';
+            }
+        });
 
         async function fetchStocks() {
             try {
-                const response = await fetch('/api/stocks/live');
+                const response = await fetch('http://localhost:8000/api/stocks/live');
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -192,7 +212,7 @@
 
         async function fetchIndices() {
             try {
-                const response = await fetch('/api/stocks/indices');
+                const response = await fetch('http://localhost:8000/api/stocks/indices');
                 if (!response.ok) return;
                 
                 const data = await response.json();

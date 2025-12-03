@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Analysis - VITTCOTT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <style>
+        body {
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #3730a3 0%, #4c1d95 100%);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .positive { color: #10b981; }
+        .negative { color: #ef4444; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(99, 102, 241, 0.3);
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        .ai-insights {
+            background: linear-gradient(135deg, #1e293b 0%, #312e81 100%);
+            border-left: 4px solid #6366f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .holding-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+            gap: 16px;
+            padding: 12px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .holding-row:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <!-- Navigation -->
+    <nav class="glass sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <a href="/index.html" class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                    VITTCOTT
+                </a>
+                <ul class="flex space-x-6">
+                    <li><a href="/index.html" class="hover:text-indigo-400 transition">Dashboard</a></li>
+                    <li><a href="/pages/stocks.html" class="hover:text-indigo-400 transition">Stocks</a></li>
+                    <li><a href="/pages/portfolio.html" class="text-indigo-400">Portfolio</a></li>
+                    <li><a href="http://localhost:8501" target="_blank" class="hover:text-indigo-400 transition">AI Assistant</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                Portfolio Analysis
+            </h1>
+            <p class="text-gray-400">AI-powered insights into your investment portfolio</p>
+        </div>
+
+        <!-- Portfolio Selection -->
+        <div class="card mb-8">
+            <h2 class="text-xl font-semibold mb-4">Your Portfolio</h2>
+            <div class="mb-4">
+                <p class="text-sm text-gray-400">Logged in as: <span id="currentUser" class="text-indigo-400 font-semibold">Loading...</span></p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Select Portfolio File</label>
+                    <select id="portfolioSelect" 
+                           class="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg focus:outline-none focus:border-indigo-500">
+                        <option value="">Loading portfolios...</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="analyzePortfolio()" class="btn-primary w-full">
+                        Analyze Portfolio
+                    </button>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">💡 Upload your portfolio to S3 at: s3://vittcott-portfolios/portfolios/&lt;username&gt;/</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" style="display: none;" class="text-center py-8">
+            <div class="loading-spinner"></div>
+            <p class="text-gray-400 mt-4">Analyzing your portfolio...</p>
+        </div>
+
+        <!-- Error Display -->
+        <div id="error" style="display: none;" class="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-8">
+            <p class="text-red-400" id="errorMessage"></p>
+        </div>
+
+        <!-- Results Container -->
+        <div id="results" style="display: none;">
+            <!-- Summary Metrics -->
+            <div class="grid md:grid-cols-4 gap-4 mb-8">
+                <div class="metric-card">
+                    <p class="text-gray-300 text-sm mb-1">Total Invested</p>
+                    <p class="text-2xl font-bold" id="totalInvested">₹0</p>
+                </div>
+                <div class="metric-card">
+                    <p class="text-gray-300 text-sm mb-1">Current Value</p>
+                    <p class="text-2xl font-bold" id="currentValue">₹0</p>
+                </div>
+                <div class="metric-card">
+                    <p class="text-gray-300 text-sm mb-1">Total P&L</p>
+                    <p class="text-2xl font-bold" id="totalPL">₹0</p>
+                </div>
+                <div class="metric-card">
+                    <p class="text-gray-300 text-sm mb-1">Return %</p>
+                    <p class="text-2xl font-bold" id="returnPct">0%</p>
+                </div>
+            </div>
+
+            <!-- Chart and AI Insights -->
+            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                <!-- Pie Chart -->
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-4">Portfolio Allocation</h3>
+                    <div class="chart-container">
+                        <canvas id="portfolioChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- AI Insights -->
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-4">🤖 AI Insights</h3>
+                    <div id="aiInsights" class="ai-insights text-gray-300 whitespace-pre-wrap">
+                        Loading insights...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Holdings Table -->
+            <div class="card">
+                <h3 class="text-xl font-semibold mb-4">Holdings Breakdown</h3>
+                <div class="holding-row font-semibold text-gray-400 text-sm">
+                    <div>SYMBOL</div>
+                    <div>QUANTITY</div>
+                    <div>INVESTED</div>
+                    <div>CURRENT</div>
+                    <div>P&L</div>
+                </div>
+                <div id="holdingsTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartInstance = null;
+        let currentUsername = null;
+
+        // Auto-detect logged in user on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadUserAndPortfolios();
+        });
+
+        async function loadUserAndPortfolios() {
+            // Get username from localStorage
+            const userDataStr = localStorage.getItem('vittcott_user');
+            const token = localStorage.getItem('vittcott_token');
+
+            if (!userDataStr || !token) {
+                // No login found, redirect to login
+                showError('Please log in first');
+                document.getElementById('currentUser').textContent = 'Not logged in';
+                setTimeout(() => {
+                    window.location.href = '/pages/login.html';
+                }, 2000);
+                return;
+            }
+
+            try {
+                const userData = JSON.parse(userDataStr);
+                currentUsername = userData.username || userData.email || 'unknown';
+                document.getElementById('currentUser').textContent = currentUsername;
+
+                // Load available portfolios from S3
+                await loadPortfolioList(currentUsername);
+            } catch (error) {
+                console.error('Error parsing user data:', error);
+                showError('Error loading user data. Please log in again.');
+                document.getElementById('currentUser').textContent = 'Error';
+            }
+        }
+
+        async function loadPortfolioList(username) {
+            const select = document.getElementById('portfolioSelect');
+            select.innerHTML = '<option value="">Loading...</option>';
+
+            try {
+                const response = await fetch(`http://localhost:8000/api/portfolios/${username}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load portfolios');
+                }
+
+                const data = await response.json();
+                
+                if (data.portfolios && data.portfolios.length > 0) {
+                    select.innerHTML = '<option value="">Select a portfolio...</option>' +
+                        data.portfolios.map(p => 
+                            `<option value="${p.filename}">${p.filename} (${p.size})</option>`
+                        ).join('');
+                } else {
+                    select.innerHTML = '<option value="">No portfolios found - Upload to S3 first</option>';
+                }
+            } catch (error) {
+                console.error('Error loading portfolios:', error);
+                select.innerHTML = '<option value="">Error loading portfolios</option>';
+                showError('Could not load portfolio list. Make sure files are uploaded to S3.');
+            }
+        }
+
+        async function analyzePortfolio() {
+            const filename = document.getElementById('portfolioSelect').value.trim();
+
+            if (!currentUsername) {
+                showError('User not detected. Please log in.');
+                return;
+            }
+
+            if (!filename) {
+                showError('Please select a portfolio file');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('results').style.display = 'none';
+
+            try {
+                const response = await fetch('http://localhost:8000/api/portfolio/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: currentUsername,
+                        filename: filename
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to analyze portfolio');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const { summary, holdings, ai_insights } = data;
+
+            // Show results section
+            document.getElementById('results').style.display = 'block';
+
+            // Update metrics
+            document.getElementById('totalInvested').textContent = 
+                `₹${summary.total_invested.toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
+            
+            if (summary.total_current_value !== null) {
+                document.getElementById('currentValue').textContent = 
+                    `₹${summary.total_current_value.toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
+                
+                const plElement = document.getElementById('totalPL');
+                const pl = summary.total_profit_loss;
+                plElement.textContent = `₹${Math.abs(pl).toLocaleString('en-IN', {maximumFractionDigits: 0})}`;
+                plElement.className = `text-2xl font-bold ${pl >= 0 ? 'positive' : 'negative'}`;
+                
+                const pctElement = document.getElementById('returnPct');
+                const pct = summary.total_return_pct;
+                pctElement.textContent = `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+                pctElement.className = `text-2xl font-bold ${pct >= 0 ? 'positive' : 'negative'}`;
+            } else {
+                document.getElementById('currentValue').textContent = 'N/A';
+                document.getElementById('totalPL').textContent = 'N/A';
+                document.getElementById('returnPct').textContent = 'N/A';
+            }
+
+            // Display pie chart
+            displayPieChart(summary.pie_chart_data);
+
+            // Display AI insights
+            document.getElementById('aiInsights').textContent = ai_insights;
+
+            // Display holdings table
+            displayHoldings(holdings);
+        }
+
+        function displayPieChart(pieData) {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            // Destroy existing chart if any
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const labels = pieData.map(item => item.symbol);
+            const values = pieData.map(item => item.value);
+            const colors = generateColors(pieData.length);
+
+            chartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderColor: '#1e293b',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#e2e8f0',
+                                font: { size: 12 },
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const item = pieData[context.dataIndex];
+                                    return [
+                                        `${item.symbol}: ${item.percentage.toFixed(1)}%`,
+                                        `Value: ₹${item.value.toLocaleString('en-IN')}`,
+                                        `Qty: ${item.quantity}`
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayHoldings(holdings) {
+            const container = document.getElementById('holdingsTable');
+            
+            container.innerHTML = holdings.map(h => `
+                <div class="holding-row">
+                    <div class="font-semibold text-indigo-400">${h.symbol}</div>
+                    <div>${h.quantity}</div>
+                    <div>₹${h.invested_value.toLocaleString('en-IN', {maximumFractionDigits: 0})}</div>
+                    <div>${h.current_value ? '₹' + h.current_value.toLocaleString('en-IN', {maximumFractionDigits: 0}) : 'N/A'}</div>
+                    <div>
+                        ${h.profit_loss !== null && h.profit_loss !== undefined ? 
+                            `<span class="${h.profit_loss >= 0 ? 'positive' : 'negative'}">
+                                ${h.profit_loss >= 0 ? '+' : ''}₹${Math.abs(h.profit_loss).toLocaleString('en-IN', {maximumFractionDigits: 0})}
+                                (${h.profit_loss_pct >= 0 ? '+' : ''}${h.profit_loss_pct.toFixed(2)}%)
+                            </span>`
+                            : 'N/A'
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function generateColors(count) {
+            const baseColors = [
+                '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', 
+                '#10b981', '#3b82f6', '#ef4444', '#06b6d4',
+                '#84cc16', '#f97316'
+            ];
+            
+            const colors = [];
+            for (let i = 0; i < count; i++) {
+                colors.push(baseColors[i % baseColors.length]);
+            }
+            return colors;
+        }
+
+        function showError(message) {
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+    </script>
+</body>
+</html>
