@@ -21,10 +21,24 @@ from models.ai_models import AskRequest, AskResponse
 from routes.stocks import router as stocks_router
 from routes.portfolio import router as portfolio_router
 
+# CloudWatch logging
+from utils.cloudwatch_logger import setup_cloudwatch_logging
+import logging
+
+# Setup CloudWatch logging on startup
+cloudwatch_logger = setup_cloudwatch_logging(
+    log_group_name="/aws/vittcott/backend",
+    log_level=logging.INFO,
+    enable_console=True
+)
+
 # ---------- Lifespan ----------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize Gemini model on startup."""
+    logger.info("🚀 Starting Vittcott Backend Application")
+    logger.info(f"Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    
     if not settings.GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY not set")
 
@@ -79,6 +93,39 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------- Request Logging Middleware ----------
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all HTTP requests and responses"""
+    request_id = str(uuid.uuid4())[:8]
+    start_time = time.time()
+    
+    # Log incoming request
+    logger.info(
+        f"[{request_id}] {request.method} {request.url.path} - "
+        f"Client: {request.client.host if request.client else 'unknown'}"
+    )
+    
+    try:
+        response = await call_next(request)
+        duration = time.time() - start_time
+        
+        # Log response
+        logger.info(
+            f"[{request_id}] {request.method} {request.url.path} - "
+            f"Status: {response.status_code} - Duration: {duration:.3f}s"
+        )
+        
+        return response
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(
+            f"[{request_id}] {request.method} {request.url.path} - "
+            f"ERROR: {str(e)} - Duration: {duration:.3f}s",
+            exc_info=True
+        )
+        raise
 
 # ---------- Root Route ----------
 @app.get("/api")
