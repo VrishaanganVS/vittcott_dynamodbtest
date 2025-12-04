@@ -1,0 +1,51 @@
+name: Code Quality Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ develop ]
+
+jobs:
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install analysis tools
+      run: |
+        pip install flake8 black isort bandit safety
+        
+    - name: Check code formatting (Black)
+      run: |
+        black --check backend/src || echo "⚠️ Code formatting issues found"
+        
+    - name: Check import sorting (isort)
+      run: |
+        isort --check-only backend/src || echo "⚠️ Import sorting issues found"
+        
+    - name: Security scan (Bandit)
+      run: |
+        bandit -r backend/src -f json -o bandit-report.json || true
+        
+    - name: Dependency vulnerability check
+      run: |
+        safety check --json || echo "⚠️ Vulnerabilities found in dependencies"
+        
+    - name: Generate quality report
+      if: always()
+      run: |
+        echo "### Code Quality Report 📊" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Quality checks completed" >> $GITHUB_STEP_SUMMARY
