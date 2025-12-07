@@ -45,7 +45,7 @@
         <button id="open-upload-btn" class="btn-modern px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-xl font-semibold shadow-lg hover:shadow-green-500/50 transition-all duration-300">📊 Upload</button>
         <!-- Logged out state (default) -->
         <div id="logged-out-btns">
-          <a href="http://localhost:3000/pages/create-account.html" class="btn-modern px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/50 transition-all duration-300">Get Started</a>
+          <a href="/pages/create-account.html" class="btn-modern px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/50 transition-all duration-300">Get Started</a>
         </div>
         <!-- Logged in state (hidden by default) -->
         <div id="logged-in-section" class="hidden flex items-center gap-3">
@@ -281,7 +281,7 @@
   <script>
     // Use shared config utility for assistant URL
     // Can be overridden by setting window.VITTCOTT_ASSISTANT_URL before config.js loads
-    const ASSISTANT_URL = window.VittCottConfig ? window.VittCottConfig.getAssistantUrl() : 'http://localhost:8501';
+    const ASSISTANT_URL = window.VittCottConfig ? window.VittCottConfig.getAssistantUrl() : '/pages/ai-assistant.html';
 
     // Elements
     const openHeaderBtn = document.getElementById('open-ai-btn');
@@ -364,8 +364,8 @@
     }
 
     // ===== Upload Portfolio Widget Logic =====
-    const PRESIGN_URL = 'http://localhost:8000/presign';
-    const REGISTER_URL = 'http://localhost:8000/register';
+    const PRESIGN_URL = '/presign';
+    const REGISTER_URL = '/register';
 
     const openUploadBtn = document.getElementById('open-upload-btn');
     const closeUploadBtn = document.getElementById('close-upload');
