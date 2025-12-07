@@ -457,14 +457,14 @@
     // Ask AI about fund
     document.getElementById('ask-ai-fund-btn')?.addEventListener('click', () => {
       if (selectedFund) {
-        const url = `http://localhost:8501?fund=${encodeURIComponent(selectedFund.name)}&nav=${selectedFund.nav}&returns=${selectedFund.returns1y}&category=${selectedFund.category}`;
+        const url = `/streamlit?fund=${encodeURIComponent(selectedFund.name)}&nav=${selectedFund.nav}&returns=${selectedFund.returns1y}&category=${selectedFund.category}`;
         window.open(url, '_blank');
       }
     });
 
     // Global Ask AI button - links to Streamlit
     document.getElementById('ask-ai-btn')?.addEventListener('click', () => {
-      window.open('http://localhost:8501', '_blank');
+      window.open('/streamlit', '_blank');
     });
 
     // Close modal
