@@ -1,1 +1,1 @@
-web: uvicorn backend.src.main:app --host 0.0.0.0 --port 8000 & streamlit run streamlit_app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
+web: uvicorn backend.src.main:app --host 0.0.0.0 --port 8000 & streamlit run streamlit_app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true & python -m http.server 3000 --directory backend/src/frontend_build
