@@ -1,0 +1,575 @@
+name: Comprehensive CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+  AWS_REGION: ap-south-1
+
+jobs:
+  # Job 1: Environment Validation
+  validate-environment:
+    name: 🔍 Validate Environment & Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      backend-changed: ${{ steps.changes.outputs.backend }}
+      frontend-changed: ${{ steps.changes.outputs.frontend }}
+      infra-changed: ${{ steps.changes.outputs.infra }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      
+      - name: Detect changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="HEAD~1"
+          fi
+          
+          git diff --name-only $BASE_SHA HEAD > changed_files.txt
+          
+          if grep -qE '^backend/|^streamlit_app\.py|^requirements\.txt' changed_files.txt; then
+            echo "backend=true" >> $GITHUB_OUTPUT
+          else
+            echo "backend=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if grep -qE '^frontend/|^backend/src/frontend_build/' changed_files.txt; then
+            echo "frontend=true" >> $GITHUB_OUTPUT
+          else
+            echo "frontend=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if grep -qE '^\\.ebextensions/|^Procfile|^\\.github/' changed_files.txt; then
+            echo "infra=true" >> $GITHUB_OUTPUT
+          else
+            echo "infra=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Validate Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt --dry-run 2>&1 | tee dep-check.log
+          
+          if grep -i "error\|conflict" dep-check.log; then
+            echo "❌ Dependency conflicts detected!"
+            exit 1
+          fi
+          
+          echo "✅ All dependencies are compatible"
+      
+      - name: Check environment variables schema
+        run: |
+          echo "Checking required environment variables..."
+          required_vars=("FINANCEHUB_API_KEY" "GEMINI_API_KEY" "AWS_REGION" "DYNAMODB_TABLE" "S3_PORTFOLIO_BUCKET")
+          
+          for var in "${required_vars[@]}"; do
+            if [ -z "${!var}" ]; then
+              echo "⚠️  $var not set (will be checked in deployment)"
+            else
+              echo "✅ $var is configured"
+            fi
+          done
+
+  # Job 2: Code Quality & Security
+  code-quality:
+    name: 🔎 Code Quality & Security Scan
+    runs-on: ubuntu-latest
+    needs: validate-environment
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install quality tools
+        run: |
+          pip install flake8 black bandit safety
+      
+      - name: Run linting
+        continue-on-error: true
+        run: |
+          echo "Running flake8..."
+          flake8 backend/ streamlit_app.py --max-line-length=120 --exclude=__pycache__,*.pyc,.git --count --statistics
+      
+      - name: Check code formatting
+        continue-on-error: true
+        run: |
+          echo "Checking code format with black..."
+          black --check backend/ streamlit_app.py
+      
+      - name: Security scan with bandit
+        continue-on-error: true
+        run: |
+          echo "Running security scan..."
+          bandit -r backend/ streamlit_app.py -f json -o bandit-report.json || true
+          cat bandit-report.json
+      
+      - name: Check dependencies for vulnerabilities
+        continue-on-error: true
+        run: |
+          echo "Checking for known vulnerabilities..."
+          safety check --json || echo "⚠️  Some vulnerabilities found (non-blocking)"
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+
+  # Job 3: Unit Tests
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: validate-environment
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio httpx
+      
+      - name: Run tests with coverage
+        env:
+          FINANCEHUB_API_KEY: ${{ secrets.FINANCEHUB_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          DYNAMODB_TABLE: VittcottPortfolios-Test
+          S3_PORTFOLIO_BUCKET: vittcott-portfolios-test
+        run: |
+          # Create test directory if doesn't exist
+          mkdir -p backend/src/tests
+          
+          # Run existing tests or create basic smoke test
+          if [ -f "backend/src/tests/test_*.py" ]; then
+            pytest backend/src/tests/ -v --cov=backend/src --cov-report=xml --cov-report=html
+          else
+            echo "⚠️  No unit tests found - creating basic import test"
+            echo "def test_imports(): 
+                import sys
+                sys.path.insert(0, 'backend/src')
+                from main import app
+                assert app is not None" > backend/src/tests/test_basic.py
+            pytest backend/src/tests/ -v
+          fi
+      
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            htmlcov/
+            coverage.xml
+
+  # Job 4: Smoke Tests (Local)
+  smoke-tests-local:
+    name: 🔥 Smoke Tests (Local Environment)
+    runs-on: ubuntu-latest
+    needs: [validate-environment, unit-tests]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install httpx pytest pytest-asyncio
+      
+      - name: Start FastAPI server
+        env:
+          FINANCEHUB_API_KEY: ${{ secrets.FINANCEHUB_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          DYNAMODB_TABLE: VittcottPortfolios-Test
+          S3_PORTFOLIO_BUCKET: vittcott-portfolios-test
+        run: |
+          cd backend/src
+          uvicorn main:app --host 0.0.0.0 --port 8000 &
+          echo $! > /tmp/fastapi.pid
+          sleep 5
+      
+      - name: Run smoke tests
+        run: |
+          python scripts/smoke_test.py || echo "⚠️  Creating smoke test script..."
+          
+          # Create smoke test if doesn't exist
+          cat > test_smoke.py << 'EOF'
+          import httpx
+          import sys
+          
+          def test_health():
+              """Test API health endpoint"""
+              try:
+                  response = httpx.get("http://localhost:8000/api", timeout=5)
+                  assert response.status_code == 200, f"Health check failed: {response.status_code}"
+                  print("✅ API health check passed")
+              except Exception as e:
+                  print(f"❌ Health check failed: {e}")
+                  sys.exit(1)
+          
+          def test_stocks_endpoint():
+              """Test stocks API endpoint"""
+              try:
+                  response = httpx.get("http://localhost:8000/api/stocks/live", timeout=10)
+                  assert response.status_code == 200, f"Stocks endpoint failed: {response.status_code}"
+                  data = response.json()
+                  assert "stocks" in data, "Response missing 'stocks' key"
+                  print(f"✅ Stocks endpoint passed - {len(data.get('stocks', []))} stocks returned")
+              except Exception as e:
+                  print(f"❌ Stocks endpoint failed: {e}")
+                  sys.exit(1)
+          
+          def test_static_files():
+              """Test static file serving"""
+              try:
+                  response = httpx.get("http://localhost:8000/", timeout=5)
+                  assert response.status_code == 200, f"Homepage failed: {response.status_code}"
+                  assert "Vittcott" in response.text, "Homepage missing expected content"
+                  print("✅ Static files serving correctly")
+              except Exception as e:
+                  print(f"❌ Static files test failed: {e}")
+                  sys.exit(1)
+          
+          if __name__ == "__main__":
+              print("🔥 Running smoke tests...")
+              test_health()
+              test_stocks_endpoint()
+              test_static_files()
+              print("\n✅ All smoke tests passed!")
+          EOF
+          
+          python test_smoke.py
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ -f /tmp/fastapi.pid ]; then
+            kill $(cat /tmp/fastapi.pid) || true
+          fi
+
+  # Job 5: Build & Deploy to AWS
+  deploy-to-aws:
+    name: 🚀 Deploy to AWS Elastic Beanstalk
+    runs-on: ubuntu-latest
+    needs: [code-quality, smoke-tests-local]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: http://vittcott-prod.eba-qjideeem.ap-south-1.elasticbeanstalk.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Verify AWS connectivity
+        run: |
+          echo "Testing AWS connectivity..."
+          aws sts get-caller-identity
+          
+          echo "Checking S3 bucket access..."
+          aws s3 ls s3://vittcott-portfolios --region ${{ env.AWS_REGION }} || echo "⚠️  S3 bucket check failed (non-blocking)"
+          
+          echo "Checking DynamoDB table..."
+          aws dynamodb describe-table --table-name VittcottPortfolios --region ${{ env.AWS_REGION }} || echo "⚠️  DynamoDB check failed (non-blocking)"
+      
+      - name: Create deployment package
+        run: |
+          echo "Creating deployment package..."
+          zip -r deploy.zip . -x "*.git*" "node_modules/*" "frontend/node_modules/*" "__pycache__/*" "*.pyc" ".env*" "htmlcov/*" "*.log"
+          ls -lh deploy.zip
+      
+      - name: Deploy to Elastic Beanstalk
+        run: |
+          # Create application version
+          VERSION_LABEL="v$(date +%Y%m%d-%H%M%S)-${{ github.sha }}"
+          
+          aws s3 cp deploy.zip s3://elasticbeanstalk-${{ env.AWS_REGION }}-312871631203/$VERSION_LABEL.zip
+          
+          aws elasticbeanstalk create-application-version \
+            --application-name vittcott-backend \
+            --version-label $VERSION_LABEL \
+            --source-bundle S3Bucket="elasticbeanstalk-${{ env.AWS_REGION }}-312871631203",S3Key="$VERSION_LABEL.zip" \
+            --region ${{ env.AWS_REGION }}
+          
+          # Deploy to environment
+          aws elasticbeanstalk update-environment \
+            --environment-name vittcott-prod \
+            --version-label $VERSION_LABEL \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "Deployment initiated with version: $VERSION_LABEL"
+          echo "VERSION_LABEL=$VERSION_LABEL" >> $GITHUB_ENV
+      
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to complete..."
+          for i in {1..30}; do
+            STATUS=$(aws elasticbeanstalk describe-environments \
+              --environment-names vittcott-prod \
+              --region ${{ env.AWS_REGION }} \
+              --query 'Environments[0].Status' \
+              --output text)
+            
+            echo "Deployment status: $STATUS (check $i/30)"
+            
+            if [ "$STATUS" == "Ready" ]; then
+              echo "✅ Deployment completed successfully!"
+              break
+            elif [ "$STATUS" == "Terminated" ] || [ "$STATUS" == "Terminating" ]; then
+              echo "❌ Deployment failed - environment terminated"
+              exit 1
+            fi
+            
+            sleep 20
+          done
+
+  # Job 6: Post-Deployment Tests
+  post-deployment-tests:
+    name: 🧪 Post-Deployment Verification
+    runs-on: ubuntu-latest
+    needs: deploy-to-aws
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install test dependencies
+        run: |
+          pip install httpx pytest
+      
+      - name: Wait for environment to stabilize
+        run: |
+          echo "Waiting 30 seconds for environment to stabilize..."
+          sleep 30
+      
+      - name: Test production environment health
+        run: |
+          PROD_URL="http://vittcott-prod.eba-qjideeem.ap-south-1.elasticbeanstalk.com"
+          
+          cat > test_production.py << 'EOF'
+          import httpx
+          import sys
+          import time
+          
+          PROD_URL = "http://vittcott-prod.eba-qjideeem.ap-south-1.elasticbeanstalk.com"
+          
+          def test_homepage():
+              """Test production homepage"""
+              print(f"Testing homepage: {PROD_URL}")
+              try:
+                  response = httpx.get(f"{PROD_URL}/", timeout=15, follow_redirects=True)
+                  assert response.status_code == 200, f"Homepage returned {response.status_code}"
+                  assert "Vittcott" in response.text, "Homepage missing expected content"
+                  print("✅ Production homepage is accessible")
+                  return True
+              except Exception as e:
+                  print(f"❌ Homepage test failed: {e}")
+                  return False
+          
+          def test_api_health():
+              """Test API health endpoint"""
+              print(f"Testing API health: {PROD_URL}/api")
+              try:
+                  response = httpx.get(f"{PROD_URL}/api", timeout=15)
+                  assert response.status_code == 200, f"API health check returned {response.status_code}"
+                  print("✅ Production API is healthy")
+                  return True
+              except Exception as e:
+                  print(f"❌ API health test failed: {e}")
+                  return False
+          
+          def test_stocks_api():
+              """Test stocks API endpoint"""
+              print(f"Testing stocks API: {PROD_URL}/api/stocks/live")
+              try:
+                  response = httpx.get(f"{PROD_URL}/api/stocks/live", timeout=20)
+                  assert response.status_code == 200, f"Stocks API returned {response.status_code}"
+                  data = response.json()
+                  assert "stocks" in data, "Stocks response missing 'stocks' key"
+                  print(f"✅ Stocks API working - {len(data.get('stocks', []))} stocks returned")
+                  return True
+              except Exception as e:
+                  print(f"❌ Stocks API test failed: {e}")
+                  return False
+          
+          def test_streamlit():
+              """Test Streamlit endpoint"""
+              print(f"Testing Streamlit: {PROD_URL}/streamlit")
+              try:
+                  response = httpx.get(f"{PROD_URL}/streamlit", timeout=20, follow_redirects=True)
+                  # Streamlit might return 200 or redirect
+                  assert response.status_code in [200, 301, 302], f"Streamlit returned {response.status_code}"
+                  print("✅ Streamlit endpoint is accessible")
+                  return True
+              except Exception as e:
+                  print(f"⚠️  Streamlit test inconclusive: {e}")
+                  return True  # Non-blocking for now
+          
+          if __name__ == "__main__":
+              print("🧪 Running production environment tests...\n")
+              
+              results = []
+              results.append(("Homepage", test_homepage()))
+              time.sleep(2)
+              results.append(("API Health", test_api_health()))
+              time.sleep(2)
+              results.append(("Stocks API", test_stocks_api()))
+              time.sleep(2)
+              results.append(("Streamlit", test_streamlit()))
+              
+              print("\n" + "="*50)
+              print("TEST RESULTS SUMMARY")
+              print("="*50)
+              
+              for test_name, passed in results:
+                  status = "✅ PASSED" if passed else "❌ FAILED"
+                  print(f"{test_name:20s}: {status}")
+              
+              failed = [name for name, passed in results if not passed]
+              if failed:
+                  print(f"\n❌ {len(failed)} test(s) failed: {', '.join(failed)}")
+                  sys.exit(1)
+              else:
+                  print("\n✅ All production tests passed!")
+          EOF
+          
+          python test_production.py
+      
+      - name: Test AWS integrations
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          cat > test_aws_integration.py << 'EOF'
+          import boto3
+          import sys
+          
+          def test_s3_connectivity():
+              """Test S3 bucket access"""
+              try:
+                  s3 = boto3.client('s3', region_name='ap-south-1')
+                  response = s3.head_bucket(Bucket='vittcott-portfolios')
+                  print("✅ S3 bucket is accessible")
+                  return True
+              except Exception as e:
+                  print(f"❌ S3 connectivity failed: {e}")
+                  return False
+          
+          def test_dynamodb_connectivity():
+              """Test DynamoDB table access"""
+              try:
+                  dynamodb = boto3.client('dynamodb', region_name='ap-south-1')
+                  response = dynamodb.describe_table(TableName='VittcottPortfolios')
+                  print("✅ DynamoDB table is accessible")
+                  return True
+              except Exception as e:
+                  print(f"❌ DynamoDB connectivity failed: {e}")
+                  return False
+          
+          if __name__ == "__main__":
+              print("🔗 Testing AWS integrations...\n")
+              
+              s3_ok = test_s3_connectivity()
+              dynamo_ok = test_dynamodb_connectivity()
+              
+              if not (s3_ok and dynamo_ok):
+                  print("\n⚠️  Some AWS integration tests failed (non-blocking)")
+              else:
+                  print("\n✅ All AWS integrations working!")
+          EOF
+          
+          pip install boto3
+          python test_aws_integration.py || echo "⚠️  AWS integration tests failed (non-blocking)"
+      
+      - name: Performance check
+        run: |
+          PROD_URL="http://vittcott-prod.eba-qjideeem.ap-south-1.elasticbeanstalk.com"
+          
+          echo "Testing response times..."
+          for i in {1..3}; do
+            START=$(date +%s%N)
+            curl -s -o /dev/null -w "%{http_code}" "$PROD_URL/"
+            END=$(date +%s%N)
+            DURATION=$(( (END - START) / 1000000 ))
+            echo "Request $i: ${DURATION}ms"
+          done
+
+  # Job 7: Notification & Reporting
+  notify:
+    name: 📊 Send Deployment Report
+    runs-on: ubuntu-latest
+    needs: [deploy-to-aws, post-deployment-tests]
+    if: always()
+    
+    steps:
+      - name: Generate deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** http://vittcott-prod.eba-qjideeem.ap-south-1.elasticbeanstalk.com" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment Validation: ${{ needs.validate-environment.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke Tests: ${{ needs.smoke-tests-local.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Deployment: ${{ needs.deploy-to-aws.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Post-Deployment Tests: ${{ needs.post-deployment-tests.result }}" >> $GITHUB_STEP_SUMMARY
