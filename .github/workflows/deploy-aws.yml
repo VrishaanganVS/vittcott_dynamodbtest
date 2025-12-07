@@ -36,30 +36,27 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r backend/requirements.txt
+        pip install awsebcli
         
-    - name: Package application
+    - name: Deploy to Elastic Beanstalk
+      env:
+        FINANCEHUB_API_KEY: ${{ secrets.FINANCEHUB_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: |
-        cd backend/src
-        zip -r ../../vittcott-backend.zip . -x "*.pyc" -x "__pycache__/*" -x "*.git/*"
-        
-    - name: Upload to S3
-      run: |
-        aws s3 cp vittcott-backend.zip s3://${{ secrets.DEPLOYMENT_BUCKET }}/releases/vittcott-backend-$(date +%Y%m%d-%H%M%S).zip
+        cd ${{ github.workspace }}
+        eb init -p python-3.11 vittcott-backend --region ${{ env.AWS_REGION }}
+        eb use vittcott-prod
+        eb setenv FINANCEHUB_API_KEY=$FINANCEHUB_API_KEY GEMINI_API_KEY=$GEMINI_API_KEY AWS_REGION=${{ env.AWS_REGION }} DYNAMODB_TABLE=VittcottPortfolios S3_PORTFOLIO_BUCKET=vittcott-portfolios
+        eb deploy --timeout 20
         
     - name: Deployment summary
       run: |
         echo "### AWS Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "- **Region:** ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment:** vittcott-prod" >> $GITHUB_STEP_SUMMARY
+        echo "- **URL:** http://vittcott-prod.eba-qideeem.ap-south-1.elasticbeanstalk.com" >> $GITHUB_STEP_SUMMARY
         echo "- **Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
         echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "✅ Backend packaged and uploaded to S3" >> $GITHUB_STEP_SUMMARY
-
-# Note: This is a basic deployment workflow
-# For production, consider using:
-# - AWS Elastic Beanstalk
-# - AWS Lambda with API Gateway
-# - AWS ECS/Fargate with Docker
-# - AWS App Runner
+        echo "✅ Backend deployed to Elastic Beanstalk" >> $GITHUB_STEP_SUMMARY
