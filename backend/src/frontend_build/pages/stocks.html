@@ -168,7 +168,7 @@
 
         async function fetchStocks() {
             try {
-                const response = await fetch('http://localhost:8000/api/stocks/live');
+                const response = await fetch('/api/stocks/live');
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -212,7 +212,7 @@
 
         async function fetchIndices() {
             try {
-                const response = await fetch('http://localhost:8000/api/stocks/indices');
+                const response = await fetch('/api/stocks/indices');
                 if (!response.ok) return;
                 
                 const data = await response.json();

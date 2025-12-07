@@ -281,7 +281,7 @@
             select.innerHTML = '<option value="">Loading...</option>';
 
             try {
-                const response = await fetch(`http://localhost:8000/api/portfolios/${username}`);
+                const response = await fetch(`/api/portfolios/${username}`);
                 
                 if (!response.ok) {
                     throw new Error('Failed to load portfolios');
@@ -323,7 +323,7 @@
             document.getElementById('results').style.display = 'none';
 
             try {
-                const response = await fetch('http://localhost:8000/api/portfolio/analyze', {
+                const response = await fetch('/api/portfolio/analyze', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
